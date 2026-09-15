@@ -54,11 +54,14 @@ function bangun() {
     siteName: CONFIG.siteName,
     services: SERVICES.map(s => s.name),
     pharmacies: PHARMACIES.map(p => ({ name: p.name, area: p.area })),
-    antrean: { pollDetik: D.ANTREAN.pollDetik, poli: D.ANTREAN.poli }
+    antrean: { pollDetik: D.ANTREAN.pollDetik, poli: D.ANTREAN.poli },
+    /* Dipakai assets/js/status.js untuk menghitung buka/tutup di browser */
+    statusBaris: CONFIG.statusBaris || []
   };
   const ASET_SUMBER = [
     'assets/css/style.css', 'assets/js/app.js', 'assets/js/forms.js',
-    'assets/js/antrean.js', 'assets/js/admin.js', 'assets/js/admin-konten.js'
+    'assets/js/antrean.js', 'assets/js/admin.js', 'assets/js/admin-konten.js',
+    'assets/js/status.js'
   ];
   const hash = crypto.createHash('sha1');
   ASET_SUMBER.forEach(f => {
@@ -129,7 +132,7 @@ function bangun() {
     description: 'Klinik pratama di Sananwetan, Kota Blitar. Poli Umum, Poli Gigi, Khitan, Apotek Mahira Farma, dan konsultasi dokter online Top Dokter. Buka 06.00 & 17.00–20.30. Daftar online lewat WhatsApp.',
     path: '/', keywords: SEO.primary,
     schema: [orgSchema, siteSchema],
-    body: PG.home()
+    body: PG.home(), extraJs: ['/assets/js/status.js']
   })));
 
   /* Profil */
@@ -273,7 +276,7 @@ function bangun() {
     description: 'Papan antrean real-time Klinik Pratama Sehat Sejahtera Blitar. Pantau nomor antrean Poli Umum, Poli Gigi, Khitan, dan Vaksin langsung dari HP Anda.',
     path: '/antrean.html', keywords: ['antrean klinik Blitar', 'nomor antrean online Blitar', 'cek antrean klinik', 'antrean poli umum Blitar'],
     schema: [crumbSchema([{ name: 'Beranda', url: '/' }, { name: 'Antrean', url: '/antrean.html' }])],
-    body: PG.antrean(), extraJs: ['/assets/js/antrean.js']
+    body: PG.antrean(), extraJs: ['/assets/js/antrean.js', '/assets/js/status.js']
   })));
 
   /* 404 (Netlify custom not-found) */
@@ -424,6 +427,7 @@ window.KLINIK_BAWAAN = ${JSON.stringify(KONTEN.bawaan(D), null, 1)};
       '/assets/css/style.css?v=' + V,
       '/assets/js/app.js?v=' + V, '/assets/js/config.js?v=' + V,
       '/assets/js/forms.js?v=' + V, '/assets/js/antrean.js?v=' + V,
+      '/assets/js/status.js?v=' + V,
       '/assets/img/logo-klinik.png',
       '/assets/icons/icon-192.png', '/assets/icons/icon-512.png',
       '/assets/icons/maskable-512.png', '/assets/icons/favicon.svg',
