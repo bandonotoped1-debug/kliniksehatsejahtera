@@ -52,9 +52,62 @@
             pesan: [{ id: 'P-001', ts: hari + 'T09:00:00', nama: 'Contoh Pengirim', hp: '628111222333', subjek: 'Pertanyaan layanan', pesan: 'Apakah hari Minggu buka?' }]
           });
         }
+        if (action === 'updateStatus') return res(demoUbahStatus(p || {}));
         res({ ok: true });
       }, 320);
     });
+  }
+
+  /** Tiruan alur "Konfirmasi → masuk antrean" agar mode demo berperilaku
+      sama persis dengan backend Apps Script. */
+  function demoUbahStatus(p) {
+    var id = p.id, st = p.status;
+    var out = { ok: true, id: id, status: st, antrean: null };
+    qaDemo('antreanAdmin', {});                       // pastikan papan demo sudah terisi
+    var reg = state.daftar.filter(function (d) { return d.id === id; })[0];
+    if (!reg) return out;
+
+    if (st === 'Batal') {
+      var n = 0;
+      QA.antre.forEach(function (r) { if (r.regId === id && r.status !== 'batal') { r.status = 'batal'; n++; } });
+      if (n) out.alasan = 'Nomor antrean pasien ini ikut dibatalkan.';
+      return out;
+    }
+    if (st !== 'Konfirmasi') return out;
+
+    var s = String(reg.layanan || '').toLowerCase();
+    var cfg = QA.poli.filter(function (x) {
+      return s === x.slug || s.indexOf(String(x.nama).toLowerCase()) > -1;
+    })[0] || null;
+    if (!cfg) { out.alasan = 'Layanan "' + reg.layanan + '" tidak memakai papan antrean. Status tetap diubah menjadi Konfirmasi.'; return out; }
+
+    var hariIni = new Date().toISOString().slice(0, 10);
+    if ((reg.tanggal || '').slice(0, 10) !== hariIni) {
+      out.alasan = 'Jadwal kunjungan ' + reg.tanggal + ', bukan hari ini — belum dimasukkan ke papan antrean. Konfirmasi ulang pada hari kunjungan.';
+      return out;
+    }
+
+    var ada = QA.antre.filter(function (r) { return r.regId === id && r.status !== 'batal'; })[0];
+    if (ada) {
+      out.sudahAda = true;
+      out.alasan = 'Pasien ini sudah ada di papan antrean' + (ada.kode && ada.kode !== '—' ? ' dengan nomor ' + ada.kode : ' dan sedang menunggu nomor') + '.';
+      return out;
+    }
+
+    var dapatNomor = QA.bukaOnline === true;
+    var no = 0, kode = '—';
+    if (dapatNomor) {
+      no = QA.antre.filter(function (r) { return r.poli === cfg.slug && Number(r.no) > 0; }).length + 1;
+      kode = cfg.kode + '-' + ('0' + no).slice(-2);
+    }
+    var baris = { id: 'd' + Date.now(), poli: cfg.slug, no: no, kode: kode, regId: id,
+      nama: reg.nama, umur: reg.umur || '', alamat: reg.alamat || '', keluhan: reg.keluhan || '',
+      hp: reg.hp || '', jenisKartu: reg.jenisKartu || '', noKartu: reg.noKartu || '',
+      sumber: 'online', status: dapatNomor ? 'menunggu' : 'tunggu', panggil: 0 };
+    QA.antre.push(baris);
+    out.antrean = { masuk: true, id: baris.id, kode: kode, no: no, poli: cfg.slug,
+                    poliNama: cfg.nama, menungguDibuka: !dapatNomor };
+    return out;
   }
 
   /* ------------------------------------------------- LOGIN */
@@ -95,12 +148,13 @@
   $('#refresh').addEventListener('click', load);
 
   /* -------------------------------------------------- TABS */
+  function bukaTab(nama) {
+    $$('.tabs button').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === nama); });
+    $$('.tabpane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === nama); });
+  }
+
   $$('.tabs button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      $$('.tabs button').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      $$('.tabpane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === b.dataset.tab); });
-    });
+    b.addEventListener('click', function () { bukaTab(b.dataset.tab); });
   });
 
   /* -------------------------------------------------- LOAD */
@@ -207,20 +261,53 @@
     }).join('');
   }
 
+  /* Pesan di tab Pendaftaran (mis. alasan pasien belum bisa masuk antrean). */
+  function dPesan(tipe, msg) {
+    var b = $('#daftar-status'); if (!b) return;
+    b.className = 'fstatus show ' + tipe; b.innerHTML = '<div>' + msg + '</div>';
+    clearTimeout(b._h); b._h = setTimeout(function () { b.className = 'fstatus'; }, 7000);
+  }
+
+  /* Konfirmasi bukan sekadar mengganti status: pasien langsung masuk papan
+     antrean hari ini (sebagai pasien online, jadi aturan "offline dulu"
+     tetap berlaku) lalu tampilan berpindah ke tab Antrean. */
   $('#tb-daftar').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-set]'); if (!b) return;
     var id = b.dataset.id, st = b.dataset.set;
     b.disabled = true;
-    api('updateStatus', { id: id, status: st }).then(function () {
+    api('updateStatus', { id: id, status: st }).then(function (r) {
       var row = state.daftar.find(function (d) { return d.id === id; });
       if (row) row.status = st;
       renderKpi(); renderDaftar();
-    }).catch(function (err) { alert('Gagal memperbarui: ' + err.message); b.disabled = false; });
+
+      var a = r && r.antrean, masuk = !!(a && a.masuk !== false);
+      if (masuk) QA.sorot = a.id || '';
+
+      /* Papan antrean ikut berubah saat pasien masuk (Konfirmasi) maupun
+         saat nomornya dicabut (Batal) — muat ulang supaya tidak basi. */
+      var segar = (masuk || st === 'Batal') ? qaMuat() : Promise.resolve();
+      return segar.then(function () {
+        if (masuk) {
+          bukaTab('antrean');
+          qaPesan('ok', a.menungguDibuka
+            ? '<strong>' + esc(row ? row.nama : 'Pasien') + '</strong> masuk daftar tunggu ' + esc(a.poliNama || '') +
+              '. Nomornya keluar setelah tombol <strong>Buka Antrean Online</strong> ditekan.'
+            : '<strong>' + esc(row ? row.nama : 'Pasien') + '</strong> masuk antrean ' + esc(a.poliNama || '') +
+              ' dengan nomor <strong>' + esc(a.kode || '') + '</strong>.');
+          return;
+        }
+        if (r && r.alasan) dPesan(r.sudahAda ? 'ok' : 'bad', esc(r.alasan));
+        else if (st !== 'Konfirmasi') dPesan('ok', 'Status diubah menjadi <strong>' + esc(st) + '</strong>.');
+      });
+    }).catch(function (err) {
+      dPesan('bad', 'Gagal memperbarui: ' + esc(err.message));
+      b.disabled = false;
+    });
   });
 
 
   /* =============================================== ANTREAN === */
-  var QA = { tanggal: '', bukaOnline: false, poli: [], antre: [], maksPanggil: 3, lewatiN: 2 };
+  var QA = { tanggal: '', bukaOnline: false, poli: [], antre: [], izin: {}, maksPanggil: 3, lewatiN: 2 };
   var LABEL = { menunggu: 'Menunggu', dipanggil: 'Dipanggil', dilayani: 'Ditangani',
                 selesai: 'Selesai', terlewat: 'Tidak hadir', tunggu: 'Menunggu antrean dibuka' };
 
@@ -236,15 +323,25 @@
         { id: 'd4', poli: QA.poli[1] ? QA.poli[1].slug : QA.poli[0].slug, no: 1, kode: (QA.poli[1] || QA.poli[0]).kode + '-01', nama: 'Contoh Pasien Gigi', hp: '628444', sumber: 'offline', status: 'menunggu', panggil: 0 }
       ];
     }
+    if (aksi === 'izinSet') {
+      QA.izin = QA.izin || {};
+      if (!QA.izin[p.poli]) QA.izin[p.poli] = {};
+      if (p.izin !== false) QA.izin[p.poli][p.sesi] = true;
+      else delete QA.izin[p.poli][p.sesi];
+      return Promise.resolve({ ok: true, izin: QA.izin, demo: true });
+    }
     if (aksi === 'antreanBuka') QA.bukaOnline = !!p.buka;
     if (aksi === 'antreanReset') { QA.antre = []; QA.bukaOnline = false; }
     if (aksi === 'antreanTambah') {
       var cfg = QA.poli.filter(function (x) { return x.slug === p.poli; })[0] || QA.poli[0];
-      var n = QA.antre.filter(function (r) { return r.poli === cfg.slug; }).length + 1;
+      var n = QA.antre.filter(function (r) { return r.poli === cfg.slug && Number(r.no) > 0; }).length + 1;
       var kd = cfg.kode + '-' + ('0' + n).slice(-2);
-      QA.antre.push({ id: 'd' + Date.now(), poli: cfg.slug, no: n, kode: kd, nik: p.nik || '',
-        nama: p.nama, umur: p.umur || '', hp: p.hp || '', sumber: 'offline', status: 'menunggu', panggil: 0 });
-      return Promise.resolve({ ok: true, kode: kd, no: n, poli: cfg.slug, demo: true });
+      var idBaru = 'd' + Date.now();
+      QA.antre.push({ id: idBaru, poli: cfg.slug, no: n, kode: kd,
+        nama: p.nama, umur: p.umur || '', alamat: p.alamat || '', keluhan: p.keluhan || '',
+        hp: p.hp || '', jenisKartu: p.jenisKartu || '', noKartu: p.noKartu || '',
+        sumber: 'offline', status: 'menunggu', panggil: 0, regId: '' });
+      return Promise.resolve({ ok: true, id: idBaru, kode: kd, no: n, poli: cfg.slug, demo: true });
     }
     if (aksi === 'antreanAksi') {
       var row = QA.antre.filter(function (r) { return r.id === p.id; })[0];
@@ -270,7 +367,7 @@
       }
     }
     return Promise.resolve({ ok: true, tanggal: QA.tanggal, bukaOnline: QA.bukaOnline,
-      poli: QA.poli, antre: QA.antre, maksPanggil: 3, lewatiN: 2, demo: true });
+      poli: QA.poli, antre: QA.antre, izin: QA.izin || {}, maksPanggil: 3, lewatiN: 2, demo: true });
   }
 
   function qaApi(aksi, payload) {
@@ -283,7 +380,8 @@
       QA.tanggal = r.tanggal; QA.bukaOnline = !!r.bukaOnline;
       QA.poli = r.poli || QA.poli; QA.antre = r.antre || [];
       QA.maksPanggil = r.maksPanggil || 3; QA.lewatiN = r.lewatiN || 2;
-      qaGambar();
+      QA.izin = r.izin || {};
+      qaGambar(); izinGambar();
       var nunggu = QA.antre.filter(function (r2) { return r2.status === 'menunggu' || r2.status === 'tunggu'; }).length;
       var kAntre = $('#k-antre'); if (kAntre) kAntre.textContent = nunggu;
     }).catch(function (e) { qaPesan('bad', 'Gagal memuat antrean: ' + e.message); });
@@ -337,7 +435,7 @@
 
       var baris = isi.length
         ? '<div class="qa-rows">' + isi.map(function (r) {
-            return '<div class="qa-r ' + esc(r.status) + '">' +
+            return '<div class="qa-r ' + esc(r.status) + (QA.sorot && r.id === QA.sorot ? ' sorot' : '') + '">' +
               '<span class="k">' + esc(r.kode || '—') + '</span>' +
               '<span class="n">' + esc(r.nama) + '</span>' +
               '<span class="src ' + esc(r.sumber) + '">' + (r.sumber === 'online' ? 'online' : 'langsung') + '</span>' +
@@ -352,7 +450,52 @@
 
       return '<div class="qa-col">' + kepala + blokAktif + baris + '</div>';
     }).join('');
+
+    /* Sorotan baris baru hanya untuk sekali gambar, lalu luruh sendiri. */
+    if (QA.sorot) {
+      var el = $('#qa-grid .qa-r.sorot');
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+      clearTimeout(QA._sorotH);
+      QA._sorotH = setTimeout(function () {
+        QA.sorot = '';
+        $$('#qa-grid .qa-r.sorot').forEach(function (x) { x.classList.remove('sorot'); });
+      }, 8000);
+    }
   }
+
+  /* ------------------------------------------- DOKTER IZIN */
+  /* Mematikan satu sesi poli untuk hari ini. Halaman publik membacanya
+     lewat ?action=status, jadi efeknya langsung tanpa build ulang. */
+  var SESI_IZIN = [{ kunci: 'pagi', nama: 'pagi' }, { kunci: 'malam', nama: 'malam' }];
+
+  function izinGambar() {
+    var kotak = $('#qa-izin-sw'); if (!kotak) return;
+    kotak.innerHTML = QA.poli.map(function (p) {
+      return SESI_IZIN.map(function (s) {
+        var izin = !!((QA.izin || {})[p.slug] || {})[s.kunci];
+        return '<button data-izin-poli="' + esc(p.slug) + '" data-izin-sesi="' + esc(s.kunci) + '"' +
+          (izin ? ' class="izin"' : '') + ' title="' + (izin ? 'Klik untuk membuka kembali' : 'Klik bila dokter izin') + '">' +
+          '<span class="s"></span>' + esc(p.nama) + ' ' + esc(s.nama) +
+          ' · ' + (izin ? 'izin' : 'ada') + '</button>';
+      }).join('');
+    }).join('');
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-izin-poli]'); if (!b) return;
+    var poli = b.dataset.izinPoli, sesi = b.dataset.izinSesi;
+    var kini = !!((QA.izin || {})[poli] || {})[sesi];
+    b.disabled = true;
+    qaApi('izinSet', { poli: poli, sesi: sesi, izin: !kini }).then(function (r) {
+      QA.izin = r.izin || QA.izin;
+      izinGambar();
+      var nama = (QA.poli.filter(function (p) { return p.slug === poli; })[0] || {}).nama || poli;
+      qaPesan('ok', kini
+        ? '<strong>' + esc(nama) + '</strong> sesi ' + esc(sesi) + ' dibuka kembali.'
+        : '<strong>' + esc(nama) + '</strong> sesi ' + esc(sesi) + ' ditutup hari ini — beranda dan papan antrean publik ikut berubah.');
+    }).catch(function (err) { qaPesan('bad', err.message); })
+      .then(function () { b.disabled = false; });
+  });
 
   /* --------------------------------------------- interaksi */
   document.addEventListener('click', function (e) {
@@ -391,26 +534,34 @@
       .catch(function (e) { qaPesan('bad', e.message); });
   });
 
-  var qaAdd = $('#qa-tambah');
-  if (qaAdd) qaAdd.addEventListener('click', function () {
-    var nama = ($('#qa-nama').value || '').trim();
+  /* Kolomnya sengaja disamakan dengan formulir pendaftaran online supaya
+     data pasien datang langsung sama lengkapnya dengan pendaftar online. */
+  var qaAdd = $('#qa-tambah'), qaForm = $('#qa-form');
+  var QA_ISIAN = ['#qa-nama', '#qa-umur', '#qa-hp', '#qa-nik', '#qa-alamat', '#qa-keluhan'];
+  var nilai = function (s) { var el = $(s); return el ? (el.value || '').trim() : ''; };
+
+  if (qaForm) qaForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nama = nilai('#qa-nama');
     if (!nama) { qaPesan('bad', 'Nama pasien wajib diisi.'); $('#qa-nama').focus(); return; }
     qaAdd.disabled = true;
     qaApi('antreanTambah', {
-      poli: $('#qa-poli').value, nama: nama, umur: ($('#qa-umur').value || '').trim(),
-      hp: ($('#qa-hp').value || '').trim(),
-      noKartu: ($('#qa-nik').value || '').replace(/[^0-9]/g, ''),
-      jenisKartu: 'KTP', sumber: 'offline'
+      poli: $('#qa-poli').value,
+      nama: nama,
+      umur: nilai('#qa-umur'),
+      hp: nilai('#qa-hp'),
+      alamat: nilai('#qa-alamat'),
+      keluhan: nilai('#qa-keluhan'),
+      jenisKartu: nilai('#qa-jenis') || 'KTP',
+      noKartu: nilai('#qa-nik').replace(/[^0-9]/g, ''),
+      sumber: 'offline'
     }).then(function (r) {
-      qaPesan('ok', 'Pasien masuk antrean dengan nomor <strong>' + esc(r.kode || '') + '</strong>.');
-      $('#qa-nama').value = ''; $('#qa-umur').value = ''; $('#qa-hp').value = ''; $('#qa-nik').value = '';
+      QA.sorot = r.id || '';
+      qaPesan('ok', '<strong>' + esc(nama) + '</strong> masuk antrean dengan nomor <strong>' + esc(r.kode || '') + '</strong>.');
+      QA_ISIAN.forEach(function (s) { var el = $(s); if (el) el.value = ''; });
       $('#qa-nama').focus();
       return qaMuat();
     }).catch(function (e) { qaPesan('bad', e.message); }).then(function () { qaAdd.disabled = false; });
-  });
-
-  $('#qa-nama') && $('#qa-nama').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); qaAdd.click(); }
   });
 
   /* Segarkan papan tiap 20 detik selama tab antrean terbuka */

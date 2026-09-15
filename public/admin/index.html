@@ -7,8 +7,8 @@
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0D2B20">
-<link rel="icon" href="/assets/icons/favicon.svg?v=1a3094f3" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/css/style.css?v=1a3094f3">
+<link rel="icon" href="/assets/icons/favicon.svg?v=89367f16" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/style.css?v=89367f16">
 <style>
   /* Wajib paling atas: atribut [hidden] harus mengalahkan display dari class
      (.login{display:grid} & .demo{display:flex} tadinya menimpa aturan bawaan
@@ -137,6 +137,36 @@
   .qa-r .src.offline{background:var(--g-50);color:var(--g-700)}
   .qa-r.dilayani{background:#F3FAE9} .qa-r.terlewat{background:#FFFBEF} .qa-r.selesai{opacity:.5}
   .qa-r.tunggu{background:#F7F9FB}
+  .qa-r.sorot{background:var(--g-50);box-shadow:inset 3px 0 0 var(--g-500)}
+  /* Saklar dokter izin — menutup satu sesi poli untuk hari ini saja */
+  .qa-izin{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 18px;margin-bottom:14px}
+  .qa-izin .t b{display:block;font-family:var(--ff-h);font-size:14.5px;color:var(--ink)}
+  .qa-izin .t span{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .qa-izin-sw{display:flex;flex-wrap:wrap;gap:8px}
+  .qa-izin-sw button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;
+    padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink-2);display:inline-flex;gap:7px;align-items:center}
+  .qa-izin-sw button .s{width:8px;height:8px;border-radius:50%;background:var(--g-500)}
+  .qa-izin-sw button:hover{border-color:var(--g-400)}
+  .qa-izin-sw button.izin{background:#FFF7E6;border-color:#F5D98B;color:#A66A00}
+  .qa-izin-sw button.izin .s{background:#E0A324}
+  /* Formulir catat pasien datang langsung — kolomnya mengikuti pendaftaran online */
+  .qa-form{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:16px 18px 18px;margin-bottom:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px 14px}
+  .qa-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .qa-f.full{grid-column:1/-1}
+  .qa-f.full-t{grid-column:1/-1;gap:3px;margin-bottom:2px}
+  .qa-f.full-t b{font-family:var(--ff-h);font-size:14.5px;color:var(--ink)}
+  .qa-f.full-t span{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .qa-f.aksi{grid-column:1/-1;align-items:flex-start}
+  .qa-f label{font-family:var(--ff-h);font-weight:600;font-size:12.5px;color:var(--ink)}
+  .qa-f label .req{color:var(--r-500)}
+  .qa-f input,.qa-f select,.qa-f textarea{padding:9px 12px;border:1.5px solid var(--line);border-radius:11px;
+    font-size:14px;font-family:var(--ff-b);background:var(--surface-2);width:100%;box-sizing:border-box}
+  .qa-f textarea{resize:vertical;line-height:1.5}
+  .qa-f input:focus,.qa-f select:focus,.qa-f textarea:focus{outline:none;border-color:var(--g-400);background:#fff}
+  @media(max-width:860px){.qa-form{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.qa-form{grid-template-columns:1fr}}
   .qa-kosong{padding:26px 16px;text-align:center;color:var(--muted);font-size:13px}
   .roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
   .rm-i{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:20px;border-left:4px solid var(--line)}
@@ -154,7 +184,7 @@
 <div class="login" id="login">
   <form class="fcard" id="form-login" novalidate>
     <div style="text-align:center;margin-bottom:24px">
-      <img src="/assets/img/logo-klinik.png?v=1a3094f3" alt="" width="60" height="60" style="margin:0 auto 14px">
+      <img src="/assets/img/logo-klinik.png?v=89367f16" alt="" width="60" height="60" style="margin:0 auto 14px">
       <h1 style="font-size:22px">Panel Admin</h1>
       <p style="font-size:14px;margin-top:6px">Klinik Pratama Sehat Sejahtera</p>
     </div>
@@ -175,7 +205,7 @@
 <!-- ============================== APLIKASI ============================== -->
 <div id="app" hidden>
   <header class="ahd">
-    <img src="/assets/img/logo-klinik.png?v=1a3094f3" alt="">
+    <img src="/assets/img/logo-klinik.png?v=89367f16" alt="">
     <div><b>Panel Admin</b><small>Klinik Pratama Sehat Sejahtera</small></div>
     <div class="sp">
       <span class="who" id="who"></span>
@@ -218,14 +248,52 @@
         </div>
       </div>
 
-      <div class="bar">
-        <select id="qa-poli" class="grow"></select>
-        <input id="qa-nama" class="grow" placeholder="Nama pasien (datang langsung)">
-        <input id="qa-umur" placeholder="Umur" style="max-width:110px">
-        <input id="qa-hp" placeholder="No. WhatsApp (opsional)" style="max-width:180px">
-        <input id="qa-nik" placeholder="No. KTP / kartu (opsional)" inputmode="numeric" maxlength="20" style="max-width:190px">
-        <button class="btn btn-primary" id="qa-tambah" style="min-height:42px">Tambah ke Antrean</button>
+      <div class="qa-izin" id="qa-izin">
+        <div class="t"><b>Dokter izin hari ini</b>
+          <span>Mematikan sesi akan menutup poli itu di beranda dan papan antrean publik — seketika, tanpa perlu Terbitkan.</span></div>
+        <div class="qa-izin-sw" id="qa-izin-sw"></div>
       </div>
+
+      <form class="qa-form" id="qa-form" novalidate>
+        <div class="qa-f full-t">
+          <b>Catat pasien datang langsung</b>
+          <span>Kolomnya sama dengan formulir pendaftaran online. Hanya <em>poli</em> dan <em>nama</em> yang wajib — sisanya boleh dilengkapi belakangan.</span>
+        </div>
+
+        <div class="qa-f"><label for="qa-poli">Poli tujuan <span class="req">*</span></label>
+          <select id="qa-poli"></select></div>
+
+        <div class="qa-f"><label for="qa-nama">Nama pasien <span class="req">*</span></label>
+          <input id="qa-nama" autocomplete="off" placeholder="Nama lengkap pasien"></div>
+
+        <div class="qa-f"><label for="qa-umur">Umur</label>
+          <input id="qa-umur" autocomplete="off" placeholder="Contoh: 34 tahun / 8 bulan"></div>
+
+        <div class="qa-f"><label for="qa-hp">Nomor WhatsApp</label>
+          <input id="qa-hp" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx"></div>
+
+        <div class="qa-f"><label for="qa-jenis">Jenis kartu</label>
+          <select id="qa-jenis">
+            <option value="KTP">KTP / NIK</option>
+            <option value="BPJS">Kartu BPJS Kesehatan</option>
+            <option value="KIA">KIA (anak)</option>
+            <option value="KK">Kartu Keluarga</option>
+            <option value="Lainnya">Asuransi / lainnya</option>
+          </select></div>
+
+        <div class="qa-f"><label for="qa-nik">Nomor KTP / kartu</label>
+          <input id="qa-nik" inputmode="numeric" autocomplete="off" maxlength="25" placeholder="16 digit NIK atau nomor kartu"></div>
+
+        <div class="qa-f full"><label for="qa-alamat">Alamat</label>
+          <input id="qa-alamat" autocomplete="off" placeholder="Contoh: Jl. Melati 12, Karangtengah, Sananwetan"></div>
+
+        <div class="qa-f full"><label for="qa-keluhan">Keluhan singkat</label>
+          <textarea id="qa-keluhan" rows="2" placeholder="Contoh: demam dan batuk sejak 2 hari lalu"></textarea></div>
+
+        <div class="qa-f aksi">
+          <button class="btn btn-primary" id="qa-tambah" type="submit" style="min-height:42px">Tambah ke Antrean</button>
+        </div>
+      </form>
       <div class="fstatus" id="qa-status"></div>
 
       <div class="qa-grid" id="qa-grid"></div>
@@ -239,6 +307,7 @@
         <select id="f-layanan"><option value="">Semua layanan</option></select>
         <input type="date" id="f-tanggal">
       </div>
+      <div class="fstatus" id="daftar-status"></div>
       <div class="scroll">
         <table class="tb">
           <thead><tr><th>Waktu</th><th>Pasien &amp; Umur</th><th>Alamat</th><th>Kontak</th><th>Kartu</th><th>Layanan</th><th>Jadwal</th><th>Keluhan</th><th>Status</th><th>Aksi</th></tr></thead>
@@ -344,9 +413,9 @@
   </div>
 </div>
 
-<script src="/assets/js/config.js?v=1a3094f3"></script>
-<script src="/assets/js/bawaan.js?v=1a3094f3"></script>
-<script src="/assets/js/admin.js?v=1a3094f3"></script>
-<script src="/assets/js/admin-konten.js?v=1a3094f3"></script>
+<script src="/assets/js/config.js?v=89367f16"></script>
+<script src="/assets/js/bawaan.js?v=89367f16"></script>
+<script src="/assets/js/admin.js?v=89367f16"></script>
+<script src="/assets/js/admin-konten.js?v=89367f16"></script>
 </body>
 </html>

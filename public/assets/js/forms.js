@@ -123,11 +123,18 @@
       tgl.max = max.toISOString().slice(0, 10);
       if (!tgl.value) tgl.value = tgl.min;
     }
-    var noteKhitan = $('#note-khitan');
+    /* Layanan tertentu (khitan, bekam, vaksinasi umrah/haji) punya admin
+       sendiri. Catatannya ikut nama & nomor layanan yang dipilih. */
+    var noteKhusus = $('#note-khusus');
     function syncNote() {
+      if (!noteKhusus) return;
       var sel = fDaftar.querySelector('[name="layanan"]:checked');
-      var punyaNomor = sel && (CFG.waByService || {})[sel.value];
-      if (noteKhitan) noteKhitan.style.display = punyaNomor ? 'flex' : 'none';
+      var m = sel && (CFG.waByService || {})[sel.value];
+      noteKhusus.style.display = m ? 'flex' : 'none';
+      if (!m) return;
+      var lay = $('#note-khusus-lay'), no = $('#note-khusus-no');
+      if (lay) lay.textContent = sel.value;
+      if (no) no.textContent = m.display || '';
     }
     fDaftar.addEventListener('change', syncNote);
     syncNote();

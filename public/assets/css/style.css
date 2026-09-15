@@ -201,6 +201,17 @@ body.lock{overflow:hidden}
 .hrow b{display:block;font-family:var(--ff-h);font-size:14.5px;color:var(--ink)}
 .hrow span{font-size:12.5px;color:var(--muted)}
 .hrow em{margin-left:auto;font-style:normal;font-size:12px;font-weight:700;color:var(--g-700);background:var(--g-50);padding:5px 10px;border-radius:var(--r-pill);white-space:nowrap}
+/* Status buka/tutup real-time (assets/js/status.js).
+   Warna lencana mengikuti keadaan, bukan ditulis tangan per baris. */
+.hrow[data-status="tutup"] em{color:var(--muted);background:var(--line-2)}
+.hrow[data-status="izin"] em{color:#A66A00;background:#FFF7E6}
+.hrow[data-status="perjanjian"] em{color:var(--b-700);background:var(--b-50)}
+.hrow[data-status="tutup"] .hrow-ic{filter:grayscale(1);opacity:.55}
+.hcard-hd .live[data-status="tutup"]{color:var(--muted);background:var(--line-2)}
+.hcard-hd .live[data-status="tutup"] .dot{background:var(--muted);animation:none}
+.q-jam{padding:9px 18px;font-size:12.5px;font-weight:600;color:var(--g-700);background:var(--g-50);border-bottom:1px solid var(--line-2)}
+.q-card[data-status="tutup"] .q-jam{color:var(--muted);background:var(--surface-2)}
+.q-card[data-status="izin"] .q-jam{color:#A66A00;background:#FFF7E6}
 .hcard-ft{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line-2)}
 .hcard-ft>div{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:11px 13px;min-width:0}
 .hcard-ft .ic{width:19px;height:19px;color:var(--brand);flex:none}
