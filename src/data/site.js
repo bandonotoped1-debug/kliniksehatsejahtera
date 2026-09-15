@@ -99,7 +99,7 @@ const CONFIG = {
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
   // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbyN1IPoVCCQ5q8DHVLWjaq6AYN1C5L0gFQNEb7KTIFAH-woGrsgVC4uTxG-B0gd9Rmz/exec',
+  gasUrl: 'https://script.google.com/macros/s/AKfycbwy8LRWVTjzzvhQz_LQJ55lJ0mFvIgndDo37eXxLNUWlpy2o-KqZFl4CL7ldYufQdFJ/exec',
   gaId: '' // opsional: 'G-XXXXXXX'
 };
 
