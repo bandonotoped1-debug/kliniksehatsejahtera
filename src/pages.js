@@ -24,6 +24,14 @@ const { icon, esc, waLink, waFor, waLinkTo, stars } = require('./render');
 
 const WA_DAFTAR = waLink('Halo Admin Klinik Pratama Sehat Sejahtera 👋\nSaya ingin mendaftar berobat.\n\nNama:\nTanggal lahir:\nLayanan:\nJadwal yang diinginkan:');
 
+/* Status buka/tutup: berkas yang sama dipakai browser (assets/js/status.js),
+   jadi HTML hasil build dan perhitungan real-time tidak pernah berbeda aturan.
+   Nilai di HTML hanyalah keadaan saat build — browser menimpanya seketika. */
+const STATUS = require('../public/assets/js/status.js');
+const STATUS_BARIS = CONFIG.statusBaris || [];
+const waktuBuild = STATUS.sekarangWIB();
+const klinikAwal = STATUS.hitungKlinik(STATUS_BARIS, waktuBuild);
+
 
 /* Seksi "Ikuti Kami" — IG & FB klinik + IG apotek */
 const sosial = () => `<section class="sec">
@@ -101,12 +109,12 @@ function home() {
         <div class="hcard-hd">
           <img src="/assets/img/logo-klinik.png" alt="" width="42" height="42">
           <div><b>Antrean Hari Ini</b><span>Klinik Pratama Sehat Sejahtera</span></div>
-          <span class="live"><i class="dot"></i> Live</span>
+          <span class="live" data-status-live data-status="${esc(klinikAwal.status)}" title="${esc(klinikAwal.ket)}"><i class="dot"></i> <span data-status-badge>${esc(klinikAwal.badge)}</span></span>
         </div>
-        <div class="hrow"><div class="hrow-ic a">${icon('stethoscope')}</div><div><b>Poli Umum</b><span>Sesi pagi 06.00–11.30</span></div><em>Buka</em></div>
-        <div class="hrow"><div class="hrow-ic b">${icon('tooth')}</div><div><b>Poli Gigi</b><span>Selasa · Kamis · Sabtu sore</span></div><em>Kuota 8</em></div>
-        <div class="hrow"><div class="hrow-ic c">${icon('shield-heart')}</div><div><b>Khitan</b><span>Dengan perjanjian H-2</span></div><em>Buka</em></div>
-        <div class="hrow"><div class="hrow-ic d">${icon('pill')}</div><div><b>Apotek Mahira Farma</b><span>3 cabang · stok terhubung</span></div><em>07.00–22.00</em></div>
+        ${STATUS_BARIS.map(b => {
+          const s = STATUS.hitung(b, waktuBuild);
+          return `<div class="hrow" data-status-baris="${esc(b.key)}" data-status="${esc(s.status)}"><div class="hrow-ic ${esc(b.kelas)}">${icon(b.icon)}</div><div><b>${esc(b.nama)}</b><span data-status-ket>${esc(s.ket)}</span></div><em data-status-badge>${esc(s.badge)}</em></div>`;
+        }).join('\n        ')}
         <div class="hcard-ft">
           <div>${icon('check-circle')}<div><b>&lt; 2 menit</b><span>Proses pendaftaran</span></div></div>
           <div>${icon('whatsapp')}<div><b>WhatsApp</b><span>Antrean langsung masuk</span></div></div>
@@ -959,7 +967,7 @@ ${phead('calendar', 'Pendaftaran Online', 'Daftar dari rumah, datang tinggal mas
               <div class="err">Persetujuan diperlukan untuk memproses pendaftaran.</div></div>
           </div>
 
-          <div class="fnote" id="note-khitan" style="margin-top:20px;background:var(--r-50);border-color:var(--r-100);color:var(--r-700);display:none">${icon('shield-heart')}<div>Pendaftaran khitan ditangani <strong>admin khusus</strong> di nomor <strong>${esc(waFor('Pelayanan Khitan').display)}</strong>. Ringkasan pendaftaran Anda akan otomatis diarahkan ke nomor tersebut.</div></div>
+          <div class="fnote" id="note-khusus" style="margin-top:20px;background:var(--r-50);border-color:var(--r-100);color:var(--r-700);display:none">${icon('shield-heart')}<div>Pendaftaran <strong id="note-khusus-lay">layanan ini</strong> ditangani <strong>admin khusus</strong> di nomor <strong id="note-khusus-no"></strong>. Ringkasan pendaftaran Anda akan otomatis diarahkan ke nomor tersebut.</div></div>
 
           <div class="fnote" style="margin-top:20px">${icon('whatsapp')}<div>Setelah tombol ditekan, data tersimpan di sistem klinik dan WhatsApp akan terbuka berisi ringkasan pendaftaran Anda. <strong>Kirim pesan tersebut</strong> agar admin dapat langsung mengonfirmasi nomor antrean.</div></div>
 
@@ -1103,11 +1111,15 @@ function offlineBody() {
 
 /* ================================================== ANTREAN === */
 function antrean() {
-  const kartuPoli = ANTREAN.poli.map(p => `<article class="q-card rv" data-poli="${p.slug}">
+  const kartuPoli = ANTREAN.poli.map(p => {
+    const b = STATUS_BARIS.filter(x => x.poli === p.slug)[0];
+    const s = b ? STATUS.hitung(b, waktuBuild) : null;
+    return `<article class="q-card rv" data-poli="${p.slug}"${s ? ` data-status="${esc(s.status)}"` : ''}>
     <header class="q-head">
       <span class="q-kode">${p.kode}</span>
       <div><b>${esc(p.nama)}</b><span class="q-sub" data-f="ringkas">Memuat…</span></div>
     </header>
+    ${s ? `<div class="q-jam" data-status-jam>${esc(s.badge + ' · ' + s.ket)}</div>` : ''}
     <div class="q-now">
       <span class="q-now-l">Sedang dipanggil</span>
       <strong data-f="sekarang">—</strong>
@@ -1119,7 +1131,8 @@ function antrean() {
       <div><b data-f="terlewat">0</b><span>Terlewat</span></div>
     </div>
     <div class="q-list" data-f="daftar"></div>
-  </article>`).join('');
+  </article>`;
+  }).join('');
 
   const banners = ANTREAN.banner.map((b, i) => `<div class="q-banner${i === 0 ? ' on' : ''}">
     <div><b>${esc(b.judul)}</b><p>${esc(b.teks)}</p></div>

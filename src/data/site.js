@@ -21,8 +21,11 @@ const CONFIG = {
   waDisplay: '0896-5350-2700',
   // Nomor khusus per layanan (kosongkan bila memakai nomor utama)
   waByService: {
-    'Pelayanan Khitan': { number: '6287840301148', display: '0878-4030-1148', label: 'Admin Khitan' },
-    'Top Dokter':       { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Top Dokter' }
+    'Pelayanan Khitan':       { number: '6287840301148', display: '0878-4030-1148', label: 'Admin Khitan' },
+    'Top Dokter':             { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Top Dokter' },
+    /* Bekam & Vaksinasi Umrah/Haji ditangani admin yang sama dengan Top Dokter */
+    'Terapi Bekam':           { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' },
+    'Vaksinasi Umrah & Haji': { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' }
   },
   email: 'halo@kliniksehatsejahtera.id',
   address: {
@@ -49,6 +52,37 @@ const CONFIG = {
     { sesi: 'Malam', jam: '17.00 – 20.30', isi: 'Pelayanan praktek',
       ket: 'Operasional malam untuk Poli Umum dan Poli Gigi sesuai jadwal dokter.', buka: true }
   ],
+  /* ------------------------------------------- STATUS REAL-TIME
+   * Sumber tunggal jam buka untuk kartu status di beranda dan papan
+   * antrean. Dipakai dua kali: dirender saat build, lalu dihitung ulang
+   * di browser tiap menit oleh assets/js/status.js — jadi halaman yang
+   * sudah lama terbuka (atau diambil dari cache) tetap jujur.
+   *
+   *   hari : 0 = Minggu … 6 = Sabtu
+   *   jam  : WIB, format 'HH:MM' (selalu dihitung di Asia/Jakarta,
+   *          bukan jam perangkat pengunjung)
+   *   poli : slug papan antrean — dipakai untuk saklar "dokter izin"
+   *          di panel admin. Baris tanpa poli tidak bisa diizinkan.
+   */
+  statusBaris: [
+    { key: 'poli-umum', nama: 'Poli Umum', icon: 'stethoscope', kelas: 'a', poli: 'poli-umum',
+      sesi: [
+        { kunci: 'pagi',  nama: 'Sesi pagi',  hari: [1, 2, 3, 4, 5, 6], mulai: '06:00', selesai: '11:30' },
+        { kunci: 'malam', nama: 'Sesi malam', hari: [1, 2, 3, 4, 5, 6], mulai: '17:00', selesai: '20:30' }
+      ] },
+    { key: 'poli-gigi', nama: 'Poli Gigi', icon: 'tooth', kelas: 'b', poli: 'poli-gigi',
+      sesi: [
+        { kunci: 'pagi',  nama: 'Sesi pagi',  hari: [1, 2, 3, 4, 5, 6], mulai: '08:00', selesai: '10:00' },
+        { kunci: 'malam', nama: 'Sesi malam', hari: [1, 3, 5],          mulai: '18:00', selesai: '20:00' }
+      ] },
+    /* Khitan tidak punya jam buka sendiri — selalu dengan perjanjian H-2. */
+    { key: 'khitan', nama: 'Khitan', icon: 'shield-heart', kelas: 'c',
+      perjanjian: true, ket: 'Dengan perjanjian H-2' },
+    { key: 'apotek', nama: 'Apotek Mahira Farma', icon: 'pill', kelas: 'd',
+      ket: '3 cabang · stok terhubung',
+      sesi: [{ kunci: 'harian', nama: 'Setiap hari', hari: [0, 1, 2, 3, 4, 5, 6], mulai: '07:00', selesai: '21:00' }] }
+  ],
+
   // dipakai schema.org openingHoursSpecification
   hoursSchema: [
     { days: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], opens: '06:00', closes: '11:30' },
@@ -306,7 +340,7 @@ const PHARMACIES = [
     area: 'Ngentak',
     slug: 'mahira-farma-2-ngentak',
     address: 'Ngentak, Kota Blitar, Jawa Timur',
-    hours: '07.00 – 22.00 (Senin – Minggu)',
+    hours: '07.00 – 21.00 (Senin – Minggu)',
     phone: '6289653502700',
     badge: 'Cabang utama · dekat klinik',
     maps: 'https://goo.gl/maps/QYMHZ57NYapUDK6o8',
@@ -370,8 +404,8 @@ const DOCTORS = [
   {
     name: 'drg. Lailiz Zulfa', initials: 'LZ', color: 'a',
     role: 'Dokter Gigi', poli: 'Poli Gigi', janji: true,
-    schedule: 'Senin, Rabu, Jumat · 17.00–20.00',
-    jadwal: [{ hari: 'Senin, Rabu, Jumat', jam: '17.00 – 20.00', sesi: 'malam' }]
+    schedule: 'Senin, Rabu, Jumat · 18.00–20.00',
+    jadwal: [{ hari: 'Senin, Rabu, Jumat', jam: '18.00 – 20.00', sesi: 'malam' }]
   }
 ];
 
