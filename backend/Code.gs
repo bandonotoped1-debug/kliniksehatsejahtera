@@ -18,6 +18,7 @@
  *        WA_ADMIN        = 6289653502700
  *        WA_ADMIN_KHITAN = 6287840301148   (admin khusus layanan khitan)
  *        WA_TOPDOKTER    = 6285755591040   (admin konsultasi Top Dokter)
+ *        WA_BEKAM_VAKSIN = 6285755591040   (admin bekam & vaksinasi umrah/haji)
  *        WA_GATEWAY_URL  = (opsional) endpoint Fonnte/Wablas
  *        WA_GATEWAY_TOKEN= (opsional) token gateway
  *        AI_WEBHOOK_URL  = (opsional) webhook n8n / chatbot AI
@@ -43,7 +44,7 @@ var HEADERS = {
   Testimoni:   ['id','ts','nama','area','layanan','rating','pesan','izin','status'],
   Pesan:       ['id','ts','nama','hp','subjek','pesan','status'],
   TopDokter:   ['id','ts','jenisKartu','noKartu','nama','umur','berat','alamat','jenisObat','keluhan','hp','status','catatan'],
-  AntreanHari: ['id','tanggal','ts','poli','no','kode','nama','umur','alamat','keluhan','hp','jenisKartu','noKartu','sumber','status','panggil','kembaliSetelah','catatan'],
+  AntreanHari: ['id','tanggal','ts','poli','no','kode','nama','umur','alamat','keluhan','hp','jenisKartu','noKartu','sumber','status','panggil','kembaliSetelah','catatan','regId'],
   Konten:      ['koleksi','id','urut','data','aktif','updated','oleh'],
   Log:         ['ts','aksi','detail','ip']
 };
@@ -56,6 +57,12 @@ function tz_()      { return 'Asia/Jakarta'; }
 function now_()     { return Utilities.formatDate(new Date(), tz_(), "yyyy-MM-dd'T'HH:mm:ss"); }
 function today_()   { return Utilities.formatDate(new Date(), tz_(), 'yyyy-MM-dd'); }
 
+/* Kolom yang baru ditambahkan pada versi berikutnya (mis. regId) tidak ada
+   di spreadsheet yang sudah terlanjur dibuat. Judul kolom yang hilang
+   ditambahkan sekali per eksekusi di ujung kanan — urutannya tetap cocok
+   dengan HEADERS karena kolom baru selalu diletakkan paling belakang. */
+var _headCek = {};
+
 function sheet_(name) {
   var sh = ss_().getSheetByName(name);
   if (!sh) {
@@ -63,6 +70,24 @@ function sheet_(name) {
     sh.appendRow(HEADERS[name]);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, HEADERS[name].length).setFontWeight('bold').setBackground('#E9F6D3');
+    _headCek[name] = true;
+    return sh;
+  }
+  if (!_headCek[name] && HEADERS[name]) {
+    _headCek[name] = true;
+    if (sh.getLastRow() === 0 || sh.getLastColumn() === 0) {
+      sh.appendRow(HEADERS[name]);
+      sh.setFrozenRows(1);
+      sh.getRange(1, 1, 1, HEADERS[name].length).setFontWeight('bold').setBackground('#E9F6D3');
+    } else {
+      var lastCol = sh.getLastColumn();
+      var ada = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+      var kurang = HEADERS[name].filter(function (h) { return ada.indexOf(h) < 0; });
+      if (kurang.length) {
+        sh.getRange(1, lastCol + 1, 1, kurang.length).setValues([kurang])
+          .setFontWeight('bold').setBackground('#E9F6D3');
+      }
+    }
   }
   return sh;
 }
@@ -126,6 +151,7 @@ function setup() {
   if (!p.getProperty('WA_ADMIN')) p.setProperty('WA_ADMIN', '6289653502700');
   if (!p.getProperty('WA_ADMIN_KHITAN')) p.setProperty('WA_ADMIN_KHITAN', '6287840301148');
   if (!p.getProperty('WA_TOPDOKTER')) p.setProperty('WA_TOPDOKTER', '6285755591040');
+  if (!p.getProperty('WA_BEKAM_VAKSIN')) p.setProperty('WA_BEKAM_VAKSIN', '6285755591040');
   pasangTriggerRekap();
   pasangTriggerResetAntrean();
   Logger.log('Setup selesai. Kata sandi awal: ubahsaya123 — segera ganti lewat buatHash().');
@@ -185,6 +211,7 @@ function doGet(e) {
     }
     if (a === 'slot') return json_({ ok: true, data: hitungSlot_(e.parameter.tanggal || today_()) });
     if (a === 'antrean') return json_(antreanPublik_());
+    if (a === 'status') return json_(statusPublik_());
     if (a === 'konten') return json_(kontenPublik_());
     if (a === 'cekAntrean') return json_(antreanCek_(e.parameter.kode));
     return json_({ ok: false, error: 'Aksi tidak dikenal' });
@@ -207,7 +234,7 @@ function doPost(e) {
       case 'topdokter':       return json_(simpanTopDokter_(d));
       case 'login':           return json_(Object.assign({ ok: true }, cekLogin_(d.user, d.pass)));
       case 'list':            wajibAdmin_(body.token); return json_(daftarSemua_());
-      case 'updateStatus':    wajibAdmin_(body.token); return json_(ubahStatus_(SHEETS.PENDAFTARAN, d.id, d.status, d.catatan));
+      case 'updateStatus':    wajibAdmin_(body.token); return json_(ubahStatusPendaftaran_(d));
       case 'updateTestimoni': wajibAdmin_(body.token); return json_(ubahStatus_(SHEETS.TESTIMONI, d.id, d.status));
       case 'kirimRekap':      wajibAdmin_(body.token); kirimRekapHarian(); return json_({ ok: true });
 
@@ -220,6 +247,8 @@ function doPost(e) {
       case 'antreanBuka':     wajibAdmin_(body.token); return json_(antreanBukaOnline_(d.buka));
       case 'antreanAksi':     wajibAdmin_(body.token); return json_(antreanAksi_(d));
       case 'antreanReset':    wajibAdmin_(body.token); resetAntreanHarian(); return json_({ ok: true });
+      case 'status':          return json_(statusPublik_());
+      case 'izinSet':         wajibAdmin_(body.token); return json_(izinSet_(d));
 
       /* ------------------------------------------------- KONTEN */
       case 'konten':          return json_(kontenPublik_());
@@ -352,10 +381,118 @@ function ubahStatus_(sheetName, id, status, catatan) {
   throw new Error('Data dengan ID ' + id + ' tidak ditemukan.');
 }
 
+/* ---------------------------------------------------------------
+ * KONFIRMASI PENDAFTARAN → MASUK PAPAN ANTREAN
+ * ---------------------------------------------------------------
+ * Menekan "Konfirmasi" di tab Pendaftaran bukan sekadar mengganti
+ * status: pasiennya langsung dimasukkan ke papan antrean hari ini
+ * sebagai pasien ONLINE — jadi aturan "offline didahulukan" tetap
+ * berlaku (kalau antrean online belum dibuka, ia menunggu nomor).
+ * Baris antrean menyimpan regId agar satu pendaftaran tidak bisa
+ * masuk papan dua kali, dan agar "Batal" ikut membatalkan nomornya.
+ * --------------------------------------------------------------- */
+
+/** Layanan pendaftaran → poli papan antrean. null bila layanan tanpa antrean. */
+function poliDariLayanan_(layanan) {
+  var s = str_(layanan).toLowerCase();
+  if (!s) return null;
+  for (var i = 0; i < ANTREAN_POLI.length; i++) {
+    var p = ANTREAN_POLI[i];
+    if (s === p.slug || s === p.nama.toLowerCase() || s.indexOf(p.nama.toLowerCase()) > -1) return p;
+  }
+  if (/gigi/.test(s)) return poliCfg_('poli-gigi');
+  if (/umum/.test(s)) return poliCfg_('poli-umum');
+  return null;
+}
+
+function antreanDariPendaftaran_(reg) {
+  var cfg = poliDariLayanan_(reg.layanan);
+  if (!cfg) {
+    return { masuk: false, alasan: 'Layanan "' + str_(reg.layanan) + '" tidak memakai papan antrean. Status tetap diubah menjadi Konfirmasi.' };
+  }
+
+  var tgl = str_(reg.tanggal).slice(0, 10);
+  if (tgl && tgl !== today_()) {
+    return { masuk: false, alasan: 'Jadwal kunjungan ' + tgl + ', bukan hari ini — belum dimasukkan ke papan antrean. Konfirmasi ulang pada hari kunjungan.' };
+  }
+
+  var sudah = barisAntrean_().filter(function (r) {
+    return str_(r.regId) === str_(reg.id) && str_(r.status) !== ST.BATAL;
+  })[0];
+  if (sudah) {
+    return { masuk: false, sudahAda: true, kode: str_(sudah.kode), poli: str_(sudah.poli),
+             alasan: 'Pasien ini sudah ada di papan antrean' + (str_(sudah.kode) && str_(sudah.kode) !== '—' ? ' dengan nomor ' + str_(sudah.kode) : ' dan sedang menunggu nomor') + '.' };
+  }
+
+  var hasil = antreanTambah_({
+    poli: cfg.slug, nama: reg.nama, umur: reg.umur, alamat: reg.alamat, keluhan: reg.keluhan,
+    hp: reg.hp, jenisKartu: reg.jenisKartu, noKartu: reg.noKartu, regId: reg.id
+  }, 'online');
+
+  var hp = normHp_(reg.hp);
+  if (hp) {
+    kirimWhatsApp_(hp, hasil.menungguDibuka
+      ? 'Assalamualaikum ' + str_(reg.nama) + ', pendaftaran Anda di Klinik Pratama Sehat Sejahtera sudah dikonfirmasi untuk ' + cfg.nama + ' hari ini. ' +
+        'Nomor antrean diberikan begitu antrean online dibuka petugas — pantau di halaman antrean.'
+      : 'Assalamualaikum ' + str_(reg.nama) + ', pendaftaran Anda sudah dikonfirmasi. Nomor antrean Anda di ' + cfg.nama + ': *' + hasil.kode + '*. ' +
+        'Mohon hadir sebelum nomor dipanggil.');
+  }
+
+  return { masuk: true, id: hasil.id, kode: hasil.kode, no: hasil.no,
+           poli: cfg.slug, poliNama: cfg.nama, menungguDibuka: !!hasil.menungguDibuka };
+}
+
+/** Batalkan baris antrean yang berasal dari satu pendaftaran. */
+function batalkanAntreanPendaftaran_(regId) {
+  var n = 0;
+  barisAntrean_().forEach(function (r) {
+    if (str_(r.regId) === str_(regId) && str_(r.status) !== ST.BATAL) {
+      tulisKolom_(r.id, 'status', ST.BATAL);
+      n++;
+    }
+  });
+  return n;
+}
+
+function ubahStatusPendaftaran_(d) {
+  var id = str_(d.id);
+  var status = str_(d.status);
+  ubahStatus_(SHEETS.PENDAFTARAN, id, status, d.catatan);
+
+  var out = { ok: true, id: id, status: status, antrean: null };
+  var reg = rows_(SHEETS.PENDAFTARAN).filter(function (r) { return String(r.id) === id; })[0];
+
+  if (status === 'Konfirmasi' && reg) {
+    var hasil = antreanDariPendaftaran_(reg);
+    if (hasil.masuk) out.antrean = hasil;
+    else { out.alasan = hasil.alasan; out.sudahAda = !!hasil.sudahAda; }
+  }
+  if (status === 'Batal') {
+    var dibatalkan = batalkanAntreanPendaftaran_(id);
+    if (dibatalkan) out.alasan = 'Nomor antrean pasien ini ikut dibatalkan.';
+  }
+  return out;
+}
+
 /* ============================================= NOTIFIKASI === */
 function samarKartu_(v) {
   var d = String(v || '').replace(/[^0-9]/g, '');
   return d ? '•••• ' + d.slice(-4) : '';
+}
+
+/**
+ * Nomor admin per layanan. Harus sepadan dengan waByService
+ * di src/data/site.js — kalau salah satu diubah, ubah keduanya.
+ *   • Khitan                        → WA_ADMIN_KHITAN
+ *   • Bekam & Vaksinasi Umrah/Haji  → WA_BEKAM_VAKSIN
+ *   • selebihnya                    → WA_ADMIN
+ */
+function waTujuanLayanan_(layanan) {
+  var s = str_(layanan).toLowerCase();
+  var p = props_();
+  if (/khitan/.test(s)) return p.getProperty('WA_ADMIN_KHITAN') || p.getProperty('WA_ADMIN');
+  if (/bekam|vaksin/.test(s)) return p.getProperty('WA_BEKAM_VAKSIN') || p.getProperty('WA_TOPDOKTER') || p.getProperty('WA_ADMIN');
+  return p.getProperty('WA_ADMIN');
 }
 
 function notifikasiAdmin_(id, d, antrean) {
@@ -371,11 +508,7 @@ function notifikasiAdmin_(id, d, antrean) {
     'Layanan : ' + d.layanan + '\n' +
     'Jadwal  : ' + d.tanggal + ' — ' + d.sesi + '\n' +
     'No. WA  : ' + normHp_(d.hp);
-  // Layanan tertentu punya admin khusus (mis. Khitan)
-  var tujuan = /khitan/i.test(str_(d.layanan))
-    ? (props_().getProperty('WA_ADMIN_KHITAN') || props_().getProperty('WA_ADMIN'))
-    : props_().getProperty('WA_ADMIN');
-  kirimWhatsApp_(tujuan, teks);
+  kirimWhatsApp_(waTujuanLayanan_(d.layanan), teks);
   notifikasiEmail_('Pendaftaran baru — ' + d.nama + ' (' + d.layanan + ')', teks.replace(/\*/g, ''));
 }
 
@@ -755,7 +888,7 @@ function antreanTambah_(d, sumber) {
       id, today_(), now_(), cfg.slug, no, kode,
       safe_(d.nama), safe_(d.umur), safe_(d.alamat), safe_(d.keluhan),
       normHp_(d.hp), safe_(d.jenisKartu), noKartu_(d.noKartu), online ? 'online' : 'offline',
-      dapatNomor ? ST.MENUNGGU : 'tunggu', 0, '', ''
+      dapatNomor ? ST.MENUNGGU : 'tunggu', 0, '', '', safe_(d.regId)
     ]);
     simpanMeta_(m);
     return { ok: true, id: id, kode: kode, no: no, poli: cfg.slug, menungguDibuka: !dapatNomor };
@@ -950,14 +1083,14 @@ function antreanAdmin_() {
   return {
     ok: true, tanggal: m.tanggal, bukaOnline: !!m.bukaOnline,
     dilayani: m.dilayani, maksPanggil: MAKS_PANGGIL, lewatiN: LEWATI_N,
-    poli: ANTREAN_POLI,
+    poli: ANTREAN_POLI, izin: izinData_().poli,
     antre: barisAntrean_().map(function (r) {
       return {
         id: r.id, ts: r.ts, poli: r.poli, no: Number(r.no) || 0, kode: r.kode,
         nama: r.nama, umur: r.umur, alamat: r.alamat, keluhan: r.keluhan, hp: r.hp,
         jenisKartu: r.jenisKartu, noKartu: r.noKartu,
         sumber: r.sumber, status: r.status, panggil: Number(r.panggil) || 0,
-        kembaliSetelah: r.kembaliSetelah
+        kembaliSetelah: r.kembaliSetelah, regId: r.regId || ''
       };
     })
   };
@@ -1017,6 +1150,50 @@ function antreanCek_(kode) {
     status: row.status, panggil: Number(row.panggil) || 0, didepan: didepan,
     perkiraanMenit: didepan * 7, bukaOnline: !!m.bukaOnline
   };
+}
+
+/* =================================================================
+ * DOKTER IZIN — sesi hari ini ditiadakan
+ * -----------------------------------------------------------------
+ * Disimpan di Script Property IZIN_HARI sebagai JSON kecil dan
+ * otomatis hangus saat tanggal berganti. Dibaca halaman publik lewat
+ * ?action=status dan dipakai assets/js/status.js untuk menutup baris
+ * kartu yang bersangkutan — tanpa build ulang situs.
+ *
+ *   { "tanggal": "2026-09-15", "poli": { "poli-gigi": { "malam": true } } }
+ * ================================================================= */
+var SESI_IZIN = ['pagi', 'malam'];
+
+function izinData_() {
+  var raw = props_().getProperty('IZIN_HARI');
+  var m = null;
+  try { m = raw ? JSON.parse(raw) : null; } catch (x) { m = null; }
+  if (!m || m.tanggal !== today_() || !m.poli) m = { tanggal: today_(), poli: {} };
+  return m;
+}
+
+function izinSet_(d) {
+  var poli = str_(d.poli);
+  var sesi = str_(d.sesi);
+  if (!poliCfg_(poli)) throw new Error('Poli tidak dikenal: ' + poli);
+  if (SESI_IZIN.indexOf(sesi) < 0) throw new Error('Sesi tidak dikenal: ' + sesi);
+
+  var m = izinData_();
+  if (!m.poli[poli]) m.poli[poli] = {};
+  var nilai = d.izin !== false;
+  if (nilai) m.poli[poli][sesi] = true;
+  else delete m.poli[poli][sesi];
+
+  props_().setProperty('IZIN_HARI', JSON.stringify(m));
+  log_('izin-dokter', poli + '/' + sesi + ' → ' + (nilai ? 'izin' : 'normal'));
+  return { ok: true, tanggal: m.tanggal, izin: m.poli };
+}
+
+/** Dibaca halaman publik tiap beberapa menit. Sengaja ringan. */
+function statusPublik_() {
+  var m = izinData_();
+  return { ok: true, tanggal: m.tanggal, waktu: now_(), izin: m.poli,
+           bukaOnline: !!metaAntrean_().bukaOnline };
 }
 
 /** Pembersih harian — dipasang otomatis oleh setup(). */
