@@ -7,7 +7,7 @@
  *   Apps Script   → tidak pernah di-cache
  * Naikkan VERSION setiap kali deploy agar cache lama dibersihkan.
  * ============================================================= */
-const VERSION = 'klinik-202609150707';
+const VERSION = 'klinik-202609150830';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const MAX_RUNTIME_ENTRIES = 80;
@@ -36,11 +36,11 @@ const PRECACHE = [
   '/kontak.html',
   '/kebijakan-privasi.html',
   '/antrean.html',
-  '/assets/css/style.css',
-  '/assets/js/app.js',
-  '/assets/js/config.js',
-  '/assets/js/forms.js',
-  '/assets/js/antrean.js',
+  '/assets/css/style.css?v=1a3094f3',
+  '/assets/js/app.js?v=1a3094f3',
+  '/assets/js/config.js?v=1a3094f3',
+  '/assets/js/forms.js?v=1a3094f3',
+  '/assets/js/antrean.js?v=1a3094f3',
   '/assets/img/logo-klinik.png',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',

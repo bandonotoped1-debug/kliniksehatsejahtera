@@ -90,7 +90,7 @@ ${keywords.length ? `<meta name="keywords" content="${esc(keywords.join(', '))}"
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap"></noscript>
-<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/style.css?v=${CONFIG.assetV || 0}">
 ${preload.map(p => `<link rel="preload" href="${p.href}" as="${p.as}"${p.type ? ` type="${p.type}"` : ''}${p.as === 'font' ? ' crossorigin' : ''}>`).join('\n')}
 ${schema.map(s => `<script type="application/ld+json">${JSON.stringify(s)}</script>`).join('\n')}`;
 }
@@ -226,9 +226,9 @@ ${header(path)}
 ${body}
 </main>
 ${footer()}
-<script src="/assets/js/config.js" defer></script>
-<script src="/assets/js/app.js" defer></script>
-${extraJs.map(j => `<script src="${j}" defer></script>`).join('\n')}
+<script src="/assets/js/config.js?v=${CONFIG.assetV || 0}" defer></script>
+<script src="/assets/js/app.js?v=${CONFIG.assetV || 0}" defer></script>
+${extraJs.map(j => `<script src="${j}?v=${CONFIG.assetV || 0}" defer></script>`).join('\n')}
 </body>
 </html>`;
 }

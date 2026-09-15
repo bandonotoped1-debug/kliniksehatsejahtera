@@ -12,9 +12,9 @@
 
 const CONFIG = {
   // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.netlify.app/').replace(/\/+$/, ''),
+  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
-  shortName: 'Klinik Pratama Sehat Sejahtera',
+  shortName: 'Klinik SSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
   // Nomor WhatsApp admin pendaftaran (format internasional tanpa +)
   waNumber: '6289653502700',
@@ -24,7 +24,7 @@ const CONFIG = {
     'Pelayanan Khitan': { number: '6287840301148', display: '0878-4030-1148', label: 'Admin Khitan' },
     'Top Dokter':       { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Top Dokter' }
   },
-  email: 'kliniksejahtera058@gmail.com',
+  email: 'halo@kliniksehatsejahtera.id',
   address: {
     street: 'Perum Puri Kenari Asri Blok E4, Karangtengah',
     district: 'Kec. Sananwetan',
@@ -65,7 +65,7 @@ const CONFIG = {
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
   // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbxaqGgD67fOMX8h_E7kBMwvpHm4bTyfA07rnoY9PAIuTYir-McsLk1JkUIuwgA-czko/exec',
+  gasUrl: 'https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT_ANDA/exec',
   gaId: '' // opsional: 'G-XXXXXXX'
 };
 

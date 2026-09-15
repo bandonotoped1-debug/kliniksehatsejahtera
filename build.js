@@ -39,6 +39,37 @@ KONTEN.muat(D)
   .then(() => bangun());   // error DI DALAM bangun() harus tetap menggagalkan build
 
 function bangun() {
+  /* ============================ PENANDA VERSI ASET ============================
+   * Berkas di /assets/* di-cache satu tahun (immutable) demi kecepatan.
+   * Tanpa penanda versi pada URL-nya, perubahan pada style.css / app.js /
+   * admin.js TIDAK PERNAH sampai ke pengunjung lama — mereka terus memakai
+   * salinan lama dari cache browser. Penanda di bawah berubah setiap kali isi
+   * berkasnya berubah, sehingga URL-nya ikut berubah dan cache lama ditinggalkan.
+   * ========================================================================== */
+  const crypto = require('crypto');
+  const RUNTIME_CFG = {
+    gasUrl: CONFIG.gasUrl,
+    waNumber: CONFIG.waNumber,
+    waByService: CONFIG.waByService || {},
+    siteName: CONFIG.siteName,
+    services: SERVICES.map(s => s.name),
+    pharmacies: PHARMACIES.map(p => ({ name: p.name, area: p.area })),
+    antrean: { pollDetik: D.ANTREAN.pollDetik, poli: D.ANTREAN.poli }
+  };
+  const ASET_SUMBER = [
+    'assets/css/style.css', 'assets/js/app.js', 'assets/js/forms.js',
+    'assets/js/antrean.js', 'assets/js/admin.js', 'assets/js/admin-konten.js'
+  ];
+  const hash = crypto.createHash('sha1');
+  ASET_SUMBER.forEach(f => {
+    const abs = path.join(OUT, f);
+    if (fs.existsSync(abs)) hash.update(fs.readFileSync(abs));
+  });
+  hash.update(JSON.stringify(RUNTIME_CFG));
+  hash.update(JSON.stringify(KONTEN.bawaan(D)));
+  const V = hash.digest('hex').slice(0, 8);
+  CONFIG.assetV = V;          // dipakai src/render.js untuk menempel ?v= pada URL aset
+
   /* -------------------------------------------------- SCHEMA.ORG */
   const orgSchema = {
     '@context': 'https://schema.org',
@@ -349,16 +380,18 @@ window.KLINIK_BAWAAN = ${JSON.stringify(KONTEN.bawaan(D), null, 1)};
 
   /* ------------------------------------------------ KONFIG RUNTIME */
   write('assets/js/config.js', `/* Dibuat otomatis oleh build.js — jangan diedit manual. */
-  window.KLINIK = ${JSON.stringify({
-    gasUrl: CONFIG.gasUrl,
-    waNumber: CONFIG.waNumber,
-    waByService: CONFIG.waByService || {},
-    siteName: CONFIG.siteName,
-    services: SERVICES.map(s => s.name),
-    pharmacies: PHARMACIES.map(p => ({ name: p.name, area: p.area })),
-    antrean: { pollDetik: D.ANTREAN.pollDetik, poli: D.ANTREAN.poli }
-  }, null, 2)};
+  window.KLINIK = ${JSON.stringify(RUNTIME_CFG, null, 2)};
   `);
+
+  /* ----------- PENANDA VERSI PADA HALAMAN ADMIN (berkas statis) */
+  /* admin/index.html tidak dihasilkan generator, jadi URL asetnya
+     ditempeli penanda versi di sini agar ikut lepas dari cache lama. */
+  const adminPath = path.join(OUT, 'admin', 'index.html');
+  if (fs.existsSync(adminPath)) {
+    let ad = fs.readFileSync(adminPath, 'utf8');
+    ad = ad.replace(/(src|href)="(\/assets\/[^"?]+)(\?v=[^"]*)?"/g, `$1="$2?v=${V}"`);
+    fs.writeFileSync(adminPath, ad);
+  }
 
   /* --------------------------- BERSIHKAN HALAMAN YATIM */
   /* Layanan/artikel yang dihapus lewat panel admin harus ikut hilang
@@ -384,9 +417,13 @@ window.KLINIK_BAWAAN = ${JSON.stringify(KONTEN.bawaan(D), null, 1)};
     const halaman = pages
       .filter(p => p.endsWith('.html') && !/^(index|offline|404)\.html$/.test(p))
       .map(p => '/' + p.replace(/\\/g, '/'));
+    /* Aset berkode harus dipracache dengan URL berversi yang sama
+       dengan yang dipakai halaman, kalau tidak service worker menyimpan
+       salinan berbeda dan halaman tetap mengunduh ulang. */
     const aset = [
-      '/assets/css/style.css',
-      '/assets/js/app.js', '/assets/js/config.js', '/assets/js/forms.js', '/assets/js/antrean.js',
+      '/assets/css/style.css?v=' + V,
+      '/assets/js/app.js?v=' + V, '/assets/js/config.js?v=' + V,
+      '/assets/js/forms.js?v=' + V, '/assets/js/antrean.js?v=' + V,
       '/assets/img/logo-klinik.png',
       '/assets/icons/icon-192.png', '/assets/icons/icon-512.png',
       '/assets/icons/maskable-512.png', '/assets/icons/favicon.svg',

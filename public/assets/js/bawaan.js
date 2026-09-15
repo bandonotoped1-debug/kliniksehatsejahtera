@@ -1091,6 +1091,7 @@ window.KLINIK_BAWAAN = {
    },
    "gasUrl": "https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT_ANDA/exec",
    "gaId": "",
+   "assetV": "1a3094f3",
    "__id": "klinik",
    "__urut": 10,
    "__aktif": true
