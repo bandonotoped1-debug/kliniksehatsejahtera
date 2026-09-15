@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-label="Ilustrasi ruang periksa dokter dengan peralatan medis">
+<title>Ilustrasi ruang periksa dokter dengan peralatan medis</title>
+<defs><clipPath id="c"><rect width="800" height="560" rx="0"/></clipPath></defs>
+<g clip-path="url(#c)">
+  <rect x="0" y="0" width="800" height="560" fill="#F4F9F6" rx="0" />
+  <rect x="0" y="400" width="800" height="160" fill="#DCE7DC" rx="0" />
+  <rect x="0" y="392" width="800" height="8" fill="#E8F1E9" rx="0" />
+  <path d="M-60 560 L40 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M50 560 L150 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M160 560 L260 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M270 560 L370 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M380 560 L480 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M490 560 L590 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M600 560 L700 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M710 560 L810 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M820 560 L920 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/>
+  <rect x="64" y="60" width="212" height="162" fill="#FFFFFF" rx="14" />
+  <rect x="70" y="66" width="200" height="150" fill="#EEF6FB" rx="10" />
+  <circle cx="228" cy="106" r="20" fill="#FBE7A8" />
+  <path d="M70 216 L130 148.5 L180 216 Z" fill="#D3EDA8" />
+  <path d="M146 216 L206 129 L270 216 Z" fill="#B5DF73" />
+  <rect x="70" y="66" width="200" height="150" fill="none" stroke="#FFFFFF" stroke-width="6" rx="10"/>
+  <line x1="170" y1="66" x2="170" y2="216" stroke="#FFFFFF" stroke-width="6"/>
+<rect x="560" y="70" width="96" height="120" fill="#FFFFFF" rx="6" /><rect x="567" y="77" width="82" height="106" fill="#E9F6D3" rx="4" />
+  <circle cx="608" cy="124" r="14" fill="#FFFFFF" opacity=".75"/>
+<!-- ranjang periksa -->
+<rect x="300" y="296" width="330" height="26" fill="#FFFFFF" rx="13" />
+<rect x="300" y="290" width="120" height="18" fill="#E9F6D3" rx="9" />
+<rect x="316" y="322" width="14" height="78" fill="#C9D6CC" rx="0" /><rect x="600" y="322" width="14" height="78" fill="#C9D6CC" rx="0" />
+<rect x="300" y="318" width="330" height="8" fill="#D3EDA8" rx="0" />
+<!-- dokter -->
+<g transform="translate(212,336) scale(1.15)">
+    <circle cx="0" cy="-46" r="26" fill="#F2C9A8" /><path d="M-26 -52 C-22 -76 22 -76 26 -52 C18 -62 -16 -64 -26 -52 Z" fill="#0D2B20" />
+    <path d="M-30 -22 C-30 -30 30 -30 30 -22 L34 56 L-34 56 Z" fill="#FFFFFF" stroke="#D3EDA8" stroke-width="3"/>
+  </g>
+<g transform="translate(212,336) scale(1.15)">
+  <path d="M-10 -22 L-10 20 L10 20 L10 -22 Z" fill="#E9F6D3" />
+  <circle cx="0" cy="14" r="7" fill="#6BA318" />
+  <path d="M-8 -18 C-8 4 8 4 8 -18" fill="none" stroke="#6BA318" stroke-width="3"/>
+</g>
+<!-- troli alat -->
+<rect x="660" y="300" width="100" height="12" fill="#FFFFFF" rx="6" />
+<rect x="668" y="312" width="84" height="66" fill="#EDF3EE" rx="6" />
+<rect x="680" y="276" width="22" height="24" fill="#D9EBF5" rx="4" /><rect x="712" y="268" width="26" height="32" fill="#D3EDA8" rx="4" />
+<circle cx="682" cy="390" r="10" fill="#C9D6CC" /><circle cx="740" cy="390" r="10" fill="#C9D6CC" />
+<g transform="translate(90,400) scale(0.85)">
+    <path d="M0 0 C-34 -14 -46 -52 -30 -84 C-4 -66 4 -34 0 0 Z" fill="#85C226" />
+    <path d="M0 0 C34 -18 44 -58 26 -88 C2 -66 -4 -32 0 0 Z" fill="#6BA318" />
+    <path d="M0 -4 C-8 -40 4 -78 24 -96 C22 -60 12 -26 0 -4 Z" fill="#B5DF73" />
+    <path d="M-26 0 L26 0 L20 38 L-20 38 Z" fill="#F7D9A0" />
+    <rect x="-30" y="-6" width="60" height="12" fill="#E9B96B" rx="4" />
+  </g>
+<!-- monitor -->
+<rect x="430" y="96" width="150" height="96" fill="#FFFFFF" rx="10" />
+<rect x="442" y="108" width="126" height="72" fill="#0D2B20" rx="6" />
+<path d="M452 152 h22 l8-20 l10 34 l10-26 l8 12 h44" fill="none" stroke="#85C226" stroke-width="3" stroke-linejoin="round"/>
+</g></svg>

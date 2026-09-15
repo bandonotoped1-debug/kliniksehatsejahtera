@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-label="Ilustrasi ruang tindakan khitan yang ramah anak">
+<title>Ilustrasi ruang tindakan khitan yang ramah anak</title>
+<defs><clipPath id="c"><rect width="800" height="560" rx="0"/></clipPath></defs>
+<g clip-path="url(#c)">
+  <rect x="0" y="0" width="800" height="560" fill="#F7F5FA" rx="0" />
+  <rect x="0" y="400" width="800" height="160" fill="#DCE7DC" rx="0" />
+  <rect x="0" y="392" width="800" height="8" fill="#E8F1E9" rx="0" />
+  <path d="M-60 560 L40 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M50 560 L150 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M160 560 L260 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M270 560 L370 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M380 560 L480 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M490 560 L590 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M600 560 L700 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M710 560 L810 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M820 560 L920 400" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/>
+  <rect x="514" y="58" width="222" height="162" fill="#FFFFFF" rx="14" />
+  <rect x="520" y="64" width="210" height="150" fill="#EEF6FB" rx="10" />
+  <circle cx="688" cy="104" r="20" fill="#FBE7A8" />
+  <path d="M520 214 L583 146.5 L635.5 214 Z" fill="#D3EDA8" />
+  <path d="M599.8 214 L662.8 127 L730 214 Z" fill="#B5DF73" />
+  <rect x="520" y="64" width="210" height="150" fill="none" stroke="#FFFFFF" stroke-width="6" rx="10"/>
+  <line x1="625" y1="64" x2="625" y2="214" stroke="#FFFFFF" stroke-width="6"/>
+<rect x="120" y="300" width="300" height="24" fill="#FFFFFF" rx="12" />
+<rect x="120" y="292" width="300" height="14" fill="#D3EDA8" rx="7" />
+<rect x="136" y="324" width="14" height="76" fill="#C9D6CC" rx="0" /><rect x="390" y="324" width="14" height="76" fill="#C9D6CC" rx="0" />
+<g transform="translate(206,326) scale(0.8)">
+    <circle cx="0" cy="-46" r="26" fill="#F2C9A8" /><path d="M-26 -52 C-22 -76 22 -76 26 -52 C18 -62 -16 -64 -26 -52 Z" fill="#0D2B20" />
+    <path d="M-30 -22 C-30 -30 30 -30 30 -22 L34 56 L-34 56 Z" fill="#B5DF73" />
+  </g>
+<g transform="translate(316,338) scale(1.05)">
+    <path d="M0 -74 C22 -74 32 -56 32 -36 C32 -8 20 4 0 4 C-20 4 -32 -8 -32 -36 C-32 -56 -22 -74 0 -74 Z" fill="#6BA318" />
+         <path d="M-14 -58 C-4 -66 8 -66 16 -58 C20 -44 18 -30 8 -24 C-2 -20 -12 -28 -16 -40 Z" fill="#F2C9A8" />
+    <path d="M-30 0 C-30 -6 30 -6 30 0 L34 56 L-34 56 Z" fill="#FFFFFF" stroke="#D3EDA8" stroke-width="3"/>
+  </g>
+<!-- alat & troli -->
+<rect x="440" y="306" width="110" height="12" fill="#FFFFFF" rx="6" />
+<rect x="452" y="318" width="86" height="60" fill="#F0EEF6" rx="6" />
+<rect x="464" y="286" width="24" height="20" fill="#FBD9D7" rx="4" /><rect x="496" y="282" width="20" height="24" fill="#D9EBF5" rx="4" />
+<!-- balon ramah anak -->
+<circle cx="640" cy="268" r="26" fill="#DA251C" /><circle cx="688" cy="292" r="20" fill="#85C226" /><circle cx="608" cy="308" r="16" fill="#2A7FAE" />
+<path d="M640 294 C636 320 644 340 636 364" fill="none" stroke="#C9D6CC" stroke-width="2"/>
+<path d="M688 312 C684 332 692 346 686 364" fill="none" stroke="#C9D6CC" stroke-width="2"/>
+<rect x="60" y="90" width="100" height="120" fill="#FFFFFF" rx="6" /><rect x="67" y="97" width="86" height="106" fill="#E9F6D3" rx="4" />
+  <circle cx="110" cy="144" r="14" fill="#FFFFFF" opacity=".75"/>
+<g transform="translate(756,400) scale(0.7)">
+    <path d="M0 0 C-34 -14 -46 -52 -30 -84 C-4 -66 4 -34 0 0 Z" fill="#85C226" />
+    <path d="M0 0 C34 -18 44 -58 26 -88 C2 -66 -4 -32 0 0 Z" fill="#6BA318" />
+    <path d="M0 -4 C-8 -40 4 -78 24 -96 C22 -60 12 -26 0 -4 Z" fill="#B5DF73" />
+    <path d="M-26 0 L26 0 L20 38 L-20 38 Z" fill="#F7D9A0" />
+    <rect x="-30" y="-6" width="60" height="12" fill="#E9B96B" rx="4" />
+  </g>
+</g></svg>

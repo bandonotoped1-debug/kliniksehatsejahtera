@@ -1,0 +1,79 @@
+{
+  "name": "Klinik Pratama Sehat Sejahtera Blitar",
+  "short_name": "Klinik SSS",
+  "description": "Klinik pratama & apotek terpadu di Kota Blitar. Daftar berobat, jadwal dokter, dan konsultasi online Top Dokter.",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#6BA318",
+  "categories": [
+    "medical",
+    "health",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daftar Berobat",
+      "short_name": "Daftar",
+      "url": "/pendaftaran.html?src=shortcut",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Top Dokter",
+      "short_name": "Top Dokter",
+      "url": "/layanan/top-dokter.html?src=shortcut",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Apotek",
+      "short_name": "Apotek",
+      "url": "/apotek.html?src=shortcut",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

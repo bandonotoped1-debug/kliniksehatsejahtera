@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panel Admin — Klinik Pratama Sehat Sejahtera</title>
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0D2B20">
+<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/style.css">
+<style>
+  /* Wajib paling atas: atribut [hidden] harus mengalahkan display dari class
+     (.login{display:grid} & .demo{display:flex} tadinya menimpa aturan bawaan
+     browser, sehingga form login tetap tampil setelah berhasil masuk). */
+  [hidden]{display:none!important}
+  body{background:var(--canvas)}
+  .ahd{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
+  .ahd img{width:34px;height:34px;border-radius:8px;background:#fff;padding:2px}
+  .ahd b{font-family:var(--ff-h);font-size:15px}
+  .ahd small{display:block;opacity:.6;font-size:11.5px}
+  .ahd .sp{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .ahd .who{font-size:12.5px;opacity:.75}
+  .ahd button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+  .ahd button:hover{background:rgba(255,255,255,.18)}
+  .awrap{max-width:1240px;margin-inline:auto;padding:24px 20px 60px}
+  .login{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .login .fcard{max-width:420px;width:100%}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  .kpi .k{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:20px}
+  .kpi b{display:block;font-family:var(--ff-h);font-size:30px;color:var(--ink);letter-spacing:-.02em}
+  .kpi span{font-size:12.5px;color:var(--muted)}
+  .kpi .k.hl{background:linear-gradient(140deg,var(--g-50),var(--surface));border-color:var(--g-200)}
+  @media(max-width:820px){.kpi{grid-template-columns:repeat(2,1fr)}}
+  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px;margin-bottom:20px;overflow-x:auto}
+  .tabs button{flex:1;min-width:120px;background:none;border:0;padding:10px 16px;border-radius:999px;font-family:var(--ff-h);font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .tabs button.on{background:var(--ink);color:#fff}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
+  .bar input,.bar select{padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;min-height:42px}
+  .bar .grow{flex:1;min-width:180px}
+  table.tb{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;font-size:14px}
+  table.tb th{text-align:left;padding:13px 14px;background:var(--g-50);font-family:var(--ff-h);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+  table.tb td{padding:13px 14px;border-top:1px solid var(--line-2);vertical-align:top}
+  table.tb tr:hover td{background:var(--surface-2)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap}
+  .p-baru{background:var(--b-50);color:var(--b-700)}
+  .p-konfirmasi{background:#FFF7E6;color:#A66A00}
+  .p-selesai{background:var(--g-50);color:var(--g-700)}
+  .p-batal{background:var(--r-50);color:var(--r-700)}
+  .act{display:flex;gap:6px;flex-wrap:wrap}
+  .act button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+  .act button:hover{border-color:var(--g-400);color:var(--brand)}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .tabpane{display:none}.tabpane.on{display:block}
+  /* ---- Editor konten ---- */
+  .kt-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .kt-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .kt-tabs button{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;
+    font-family:var(--ff-h);font-weight:600;font-size:13px;color:var(--ink-2);cursor:pointer}
+  .kt-tabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .kt-tabs .n{opacity:.55;font-size:11.5px;margin-left:3px}
+  .kt-ket{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .kt-list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  .kt-r{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-2)}
+  .kt-r:last-child{border-bottom:0}
+  .kt-r.mati{opacity:.45;background:var(--surface-2)}
+  .kt-urut{display:flex;flex-direction:column;gap:2px;flex:none}
+  .kt-urut button{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:24px;height:19px;
+    font-size:11px;line-height:1;cursor:pointer;color:var(--ink-2);padding:0}
+  .kt-urut button:disabled{opacity:.3;cursor:default}
+  .kt-n{flex:1;min-width:0}
+  .kt-n b{display:block;font-family:var(--ff-h);font-size:14.5px;color:var(--ink)}
+  .kt-n span{display:block;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kt-a{display:flex;gap:6px;flex-wrap:wrap;flex:none}
+  .kt-a button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 11px;
+    font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+  .kt-a button:hover{border-color:var(--g-400);color:var(--brand)}
+  .kt-a button.bahaya:hover{border-color:var(--r-500);color:var(--r-600)}
+  .kt-kosong{padding:40px 22px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6}
+  .kt-terbit{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 18px;margin-bottom:18px}
+  .kt-terbit.ada{background:#FFF7E6;border-color:#F5D98B}
+  .kt-terbit span{font-size:13.5px;color:var(--ink-2)}
+  /* Modal editor */
+  .kt-modal{position:fixed;inset:0;z-index:80;background:rgba(13,43,32,.5);display:grid;place-items:center;padding:20px}
+  .kt-modal-in{background:var(--surface);border-radius:var(--r-lg);width:min(760px,100%);max-height:90vh;
+    display:flex;flex-direction:column;overflow:hidden}
+  .kt-modal-h{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .kt-modal-h b{flex:1;font-family:var(--ff-h);font-size:17px;color:var(--ink);text-transform:capitalize}
+  .kt-modal-h button{border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1}
+  .kt-modal-b{padding:22px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .kt-modal-f{display:flex;gap:10px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line)}
+  .kt-f{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .kt-f.full{grid-column:1/-1}
+  .kt-f label{font-family:var(--ff-h);font-weight:600;font-size:13px;color:var(--ink)}
+  .kt-f input,.kt-f select,.kt-f textarea{padding:10px 13px;border:1.5px solid var(--line);border-radius:11px;
+    font-size:14px;font-family:var(--ff-b);background:var(--surface-2);width:100%;box-sizing:border-box}
+  .kt-f textarea{resize:vertical;line-height:1.55}
+  .kt-f input:focus,.kt-f select:focus,.kt-f textarea:focus{outline:none;border-color:var(--g-400);background:#fff}
+  .kt-f input[readonly]{background:var(--line-2);color:var(--muted)}
+  .kt-h{font-size:12px;color:var(--muted);line-height:1.5}
+  .kt-f .req{color:var(--r-500)}
+  .kt-cek{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+  .kt-cek input{width:auto;flex:none;margin-top:2px}
+  @media(max-width:700px){.kt-modal-b{grid-template-columns:1fr}}
+  /* ---- Panel antrean ---- */
+  .qa-top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:16px 18px;margin-bottom:18px}
+  .qa-top .t b{font-family:var(--ff-h);font-size:15px;color:var(--ink);display:block}
+  .qa-top .t span{font-size:12.5px;color:var(--muted)}
+  .qa-sw{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  .qa-sw button{border:0;border-radius:999px;padding:11px 20px;font-weight:700;font-size:13.5px;cursor:pointer;color:#fff}
+  .qa-sw button.buka{background:var(--g-600)} .qa-sw button.tutup{background:var(--ink-2)}
+  .qa-flag{font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px}
+  .qa-flag.on{background:var(--g-50);color:var(--g-700)} .qa-flag.off{background:#FFF7E6;color:#A66A00}
+  .qa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
+  .qa-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  .qa-h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line-2);background:var(--g-50)}
+  .qa-h b{font-family:var(--ff-h);font-size:14.5px;color:var(--ink);flex:1}
+  .qa-h small{font-size:11.5px;color:var(--muted)}
+  .qa-aktif{padding:14px 16px;border-bottom:1px solid var(--line-2);background:var(--surface-2)}
+  .qa-aktif .no{font-family:var(--ff-h);font-size:26px;color:var(--ink);letter-spacing:-.02em}
+  .qa-aktif .nm{font-size:13px;color:var(--body);margin-bottom:9px}
+  .qa-aktif .pc{font-size:11.5px;font-weight:700;color:#A66A00;background:#FFF7E6;border-radius:999px;padding:3px 10px;display:inline-block;margin-left:8px}
+  .qa-btns{display:flex;flex-wrap:wrap;gap:6px}
+  .qa-btns button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 11px;
+    font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+  .qa-btns button:hover{border-color:var(--g-400);color:var(--brand)}
+  .qa-btns button.pri{background:var(--g-600);border-color:var(--g-600);color:#fff}
+  .qa-btns button.pri:hover{background:var(--g-700);color:#fff}
+  .qa-rows{max-height:340px;overflow-y:auto}
+  .qa-r{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line-2);font-size:13px}
+  .qa-r .k{font-family:var(--ff-h);font-weight:700;min-width:46px;color:var(--ink)}
+  .qa-r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qa-r .src{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--b-50);color:var(--b-700)}
+  .qa-r .src.offline{background:var(--g-50);color:var(--g-700)}
+  .qa-r.dilayani{background:#F3FAE9} .qa-r.terlewat{background:#FFFBEF} .qa-r.selesai{opacity:.5}
+  .qa-r.tunggu{background:#F7F9FB}
+  .qa-kosong{padding:26px 16px;text-align:center;color:var(--muted);font-size:13px}
+  .roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .rm-i{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:20px;border-left:4px solid var(--line)}
+  .rm-i.done{border-left-color:var(--g-500);background:linear-gradient(140deg,var(--g-50),var(--surface))}
+  .rm-t{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+  .rm-i.done .rm-t{color:var(--g-700)}
+  .rm-i b{display:block;font-family:var(--ff-h);font-size:16px;color:var(--ink);margin:7px 0 8px}
+  .rm-i p{font-size:13.5px;color:var(--body);line-height:1.6;margin:0}
+  .demo{background:#FFF7E6;border:1px solid #F5D98B;color:#7A4E00;border-radius:12px;padding:14px 16px;font-size:13.5px;margin-bottom:20px;display:flex;gap:10px}
+</style>
+</head>
+<body>
+
+<!-- ============================== LOGIN ============================== -->
+<div class="login" id="login">
+  <form class="fcard" id="form-login" novalidate>
+    <div style="text-align:center;margin-bottom:24px">
+      <img src="/assets/img/logo-klinik.png" alt="" width="60" height="60" style="margin:0 auto 14px">
+      <h1 style="font-size:22px">Panel Admin</h1>
+      <p style="font-size:14px;margin-top:6px">Klinik Pratama Sehat Sejahtera</p>
+    </div>
+    <div class="fstatus" id="login-status"></div>
+    <div class="field" style="margin-bottom:14px">
+      <label for="user">Nama pengguna</label>
+      <input id="user" name="user" autocomplete="username" required placeholder="admin">
+    </div>
+    <div class="field">
+      <label for="pass">Kata sandi</label>
+      <input id="pass" name="pass" type="password" autocomplete="current-password" required placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary btn-lg block" style="margin-top:20px" type="submit" id="btn-login">Masuk</button>
+    <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:16px">Halaman ini tidak terindeks mesin pencari dan tidak tertaut dari situs publik.</p>
+  </form>
+</div>
+
+<!-- ============================== APLIKASI ============================== -->
+<div id="app" hidden>
+  <header class="ahd">
+    <img src="/assets/img/logo-klinik.png" alt="">
+    <div><b>Panel Admin</b><small>Klinik Pratama Sehat Sejahtera</small></div>
+    <div class="sp">
+      <span class="who" id="who"></span>
+      <button id="refresh">Muat ulang</button>
+      <button id="logout">Keluar</button>
+    </div>
+  </header>
+
+  <div class="awrap">
+    <div class="demo" id="demo-note" hidden>
+      <span>ℹ️</span><div><strong>Mode demo.</strong> URL Google Apps Script belum dipasang di <code>assets/js/config.js</code>, jadi data di bawah ini adalah contoh. Ikuti <code>docs/ARSITEKTUR.md</code> bagian “Deploy Apps Script” untuk menghubungkan spreadsheet asli.</div>
+    </div>
+
+    <div class="kpi">
+      <div class="k hl"><b id="k-antre">0</b><span>Menunggu di antrean</span></div>
+      <div class="k"><b id="k-hari">0</b><span>Pendaftaran hari ini</span></div>
+      <div class="k"><b id="k-baru">0</b><span>Belum dikonfirmasi</span></div>
+      <div class="k"><b id="k-pesan">0</b><span>Pesan belum dibaca</span></div>
+    </div>
+
+    <div class="tabs">
+      <button class="on" data-tab="antrean">Antrean Hari Ini</button>
+      <button data-tab="daftar">Pendaftaran</button>
+      <button data-tab="konten">Konten Situs</button>
+      <button data-tab="pesan">Pesan Masuk</button>
+      <button data-tab="rekap">Rekap &amp; Ekspor</button>
+    </div>
+
+    <!-- ANTREAN -->
+    <section class="tabpane on" data-pane="antrean">
+      <div class="qa-top">
+        <div class="t">
+          <b>Papan antrean <span id="qa-tgl"></span></b>
+          <span>Pasien yang datang langsung dicatat lebih dulu, lalu buka antrean online.</span>
+        </div>
+        <div class="qa-sw">
+          <span class="qa-flag off" id="qa-flag">Antrean online tertutup</span>
+          <button class="buka" id="qa-toggle">Buka Antrean Online</button>
+          <button style="background:var(--surface);color:var(--ink-2);border:1px solid var(--line)" id="qa-reset">Reset Hari Ini</button>
+        </div>
+      </div>
+
+      <div class="bar">
+        <select id="qa-poli" class="grow"></select>
+        <input id="qa-nama" class="grow" placeholder="Nama pasien (datang langsung)">
+        <input id="qa-umur" placeholder="Umur" style="max-width:110px">
+        <input id="qa-hp" placeholder="No. WhatsApp (opsional)" style="max-width:180px">
+        <input id="qa-nik" placeholder="No. KTP / kartu (opsional)" inputmode="numeric" maxlength="20" style="max-width:190px">
+        <button class="btn btn-primary" id="qa-tambah" style="min-height:42px">Tambah ke Antrean</button>
+      </div>
+      <div class="fstatus" id="qa-status"></div>
+
+      <div class="qa-grid" id="qa-grid"></div>
+    </section>
+
+    <!-- PENDAFTARAN -->
+    <section class="tabpane" data-pane="daftar">
+      <div class="bar">
+        <input class="grow" id="q" placeholder="Cari nama, nomor WA, atau keluhan…">
+        <select id="f-status"><option value="">Semua status</option><option>Baru</option><option>Konfirmasi</option><option>Selesai</option><option>Batal</option></select>
+        <select id="f-layanan"><option value="">Semua layanan</option></select>
+        <input type="date" id="f-tanggal">
+      </div>
+      <div class="scroll">
+        <table class="tb">
+          <thead><tr><th>Waktu</th><th>Pasien &amp; Umur</th><th>Alamat</th><th>Kontak</th><th>Kartu</th><th>Layanan</th><th>Jadwal</th><th>Keluhan</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tb-daftar"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty-daftar" hidden>Belum ada pendaftaran yang cocok dengan filter.</div>
+    </section>
+
+    <!-- KONTEN -->
+    <section class="tabpane" data-pane="konten">
+      <div class="kt-terbit" id="kt-terbit">
+        <span id="kt-terbit-t">Memuat…</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="kt-seed" style="min-height:40px">Isi dari data situs</button>
+          <button class="btn btn-primary" id="kt-terbitkan" style="min-height:40px">Terbitkan</button>
+        </div>
+      </div>
+
+      <div class="fstatus" id="kt-status"></div>
+      <div class="kt-tabs" id="kt-tabs"></div>
+      <div class="kt-bar">
+        <div class="kt-ket" id="kt-ket"></div>
+        <button class="btn btn-primary" id="kt-tambah" style="min-height:40px">+ Tambah</button>
+      </div>
+      <div class="kt-list" id="kt-list"></div>
+
+      <details style="margin-top:22px">
+        <summary style="cursor:pointer;font-family:var(--ff-h);font-weight:600;font-size:14px;color:var(--ink-2)">Pengaturan penerbitan (Netlify Build Hook)</summary>
+        <div class="fcard" style="margin-top:12px">
+          <p style="font-size:13.5px;margin-bottom:14px">Agar tombol <strong>Terbitkan</strong> berfungsi, buat build hook di Netlify:
+            <strong>Site configuration → Build &amp; deploy → Build hooks → Add build hook</strong>, lalu tempel URL-nya di sini.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input id="kt-hook" class="grow" placeholder="https://api.netlify.com/build_hooks/..." style="flex:1;min-width:260px;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:14px">
+            <button class="btn btn-ghost" id="kt-hook-simpan" style="min-height:44px">Simpan</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:10px">URL ini disimpan di Apps Script, bukan di halaman ini, jadi tidak terbaca pengunjung situs.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- PESAN -->
+    <section class="tabpane" data-pane="pesan">
+      <div class="scroll">
+        <table class="tb">
+          <thead><tr><th>Waktu</th><th>Nama</th><th>Kontak</th><th>Perihal</th><th>Pesan</th><th>Aksi</th></tr></thead>
+          <tbody id="tb-pesan"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty-pesan" hidden>Belum ada pesan masuk.</div>
+    </section>
+
+    <!-- REKAP -->
+    <section class="tabpane" data-pane="rekap">
+      <div class="fcard">
+        <h2 style="font-size:19px;margin-bottom:8px">Rekap Pendaftaran</h2>
+        <p style="font-size:14px;margin-bottom:22px">Ringkasan jumlah pendaftaran per layanan dan per hari untuk 14 hari terakhir.</p>
+        <div id="rekap-layanan" style="display:grid;gap:12px;margin-bottom:28px"></div>
+        <h3 style="font-size:16px;margin-bottom:14px">Per hari</h3>
+        <div id="rekap-hari" style="display:grid;gap:8px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:28px">
+          <button class="btn btn-primary" id="export-csv">Unduh CSV Pendaftaran</button>
+          <button class="btn btn-ghost" id="copy-wa">Salin Rekap untuk WhatsApp</button>
+        </div>
+      </div>
+    
+      <div class="fcard" style="margin-top:24px">
+        <h2 style="font-size:20px;margin-bottom:6px">Arah Pengembangan Klinik</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:20px">Catatan internal — sengaja tidak ditampilkan di halaman publik.</p>
+        <div class="roadmap">
+          <div class="rm-i done">
+            <span class="rm-t">Tahap 1 — Berjalan</span>
+            <b>Fondasi digital</b>
+            <p>Profil digital, pendaftaran online, papan antrean real-time per poli, rekap otomatis ke admin, dan layanan Top Dokter lewat WhatsApp.</p>
+          </div>
+          <div class="rm-i">
+            <span class="rm-t">Tahap 2 — Berikutnya</span>
+            <b>Rekam medis elektronik internal</b>
+            <p>Riwayat kunjungan, diagnosis, dan resep tersimpan per pasien sehingga dokter tidak perlu bertanya ulang tiap kedatangan.</p>
+          </div>
+          <div class="rm-i">
+            <span class="rm-t">Tahap 3 — Integrasi</span>
+            <b>BPJS Kesehatan &amp; SATUSEHAT</b>
+            <p>Penyambungan lewat lapisan penghubung khusus, tanpa membongkar aplikasi publik yang sudah berjalan. Hanya data yang diwajibkan regulasi yang dikirim.</p>
+          </div>
+        </div>
+      </div>
+</section>
+  </div>
+</div>
+
+
+<!-- MODAL EDITOR KONTEN -->
+<div class="kt-modal" id="kt-modal" hidden>
+  <div class="kt-modal-in">
+    <div class="kt-modal-h"><b id="kt-modal-j">Edit</b><button id="kt-modal-x" aria-label="Tutup">&times;</button></div>
+    <div class="kt-modal-b" id="kt-modal-b"></div>
+    <div style="padding:0 22px"><div class="fstatus" id="kt-modal-s"></div></div>
+    <div class="kt-modal-f">
+      <button class="btn btn-ghost" id="kt-modal-batal">Batal</button>
+      <button class="btn btn-primary" id="kt-modal-simpan">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/bawaan.js"></script>
+<script src="/assets/js/admin.js"></script>
+<script src="/assets/js/admin-konten.js"></script>
+</body>
+</html>

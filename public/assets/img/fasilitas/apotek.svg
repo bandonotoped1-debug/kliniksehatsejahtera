@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-label="Ilustrasi apotek dengan rak obat dan konter pelayanan">
+<title>Ilustrasi apotek dengan rak obat dan konter pelayanan</title>
+<defs><clipPath id="c"><rect width="800" height="560" rx="0"/></clipPath></defs>
+<g clip-path="url(#c)">
+  <rect x="0" y="0" width="800" height="560" fill="#F6FAF3" rx="0" />
+  <rect x="0" y="410" width="800" height="150" fill="#DCE7DC" rx="0" />
+  <rect x="0" y="402" width="800" height="8" fill="#E8F1E9" rx="0" />
+  <path d="M-60 560 L40 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M50 560 L150 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M160 560 L260 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M270 560 L370 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M380 560 L480 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M490 560 L590 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M600 560 L700 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M710 560 L810 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/><path d="M820 560 L920 410" stroke="#C9D6CC" stroke-width="1.2" opacity=".5"/>
+<!-- rak obat -->
+<rect x="60" y="70" width="300" height="320" fill="#FFFFFF" rx="10" />
+<rect x="72" y="86" width="276" height="62" fill="#F1F7F0" rx="6" />
+  <rect x="82" y="96" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="112" y="96" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="142" y="96" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="172" y="96" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="202" y="96" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="232" y="96" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="262" y="96" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="292" y="96" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="322" y="96" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="72" y="162" width="276" height="62" fill="#F1F7F0" rx="6" />
+  <rect x="82" y="172" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="112" y="172" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="142" y="172" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="172" y="172" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="202" y="172" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="232" y="172" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="262" y="172" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="292" y="172" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="322" y="172" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="72" y="238" width="276" height="62" fill="#F1F7F0" rx="6" />
+  <rect x="82" y="248" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="112" y="248" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="142" y="248" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="172" y="248" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="202" y="248" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="232" y="248" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="262" y="248" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="292" y="248" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="322" y="248" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="72" y="314" width="276" height="62" fill="#F1F7F0" rx="6" />
+  <rect x="82" y="324" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="112" y="324" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="142" y="324" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="172" y="324" width="20" height="44" fill="#D9EBF5" rx="3" /><rect x="202" y="324" width="20" height="44" fill="#FBD9D7" rx="3" /><rect x="232" y="324" width="20" height="44" fill="#D3EDA8" rx="3" /><rect x="262" y="324" width="20" height="44" fill="#F7D9A0" rx="3" /><rect x="292" y="324" width="20" height="44" fill="#B5DF73" rx="3" /><rect x="322" y="324" width="20" height="44" fill="#D9EBF5" rx="3" />
+<!-- konter -->
+<rect x="400" y="300" width="330" height="22" fill="#FFFFFF" rx="11" />
+<rect x="410" y="322" width="310" height="88" fill="#E9F6D3" rx="8" />
+<rect x="430" y="340" width="60" height="52" fill="#FFFFFF" rx="5" /><rect x="506" y="340" width="60" height="52" fill="#FFFFFF" rx="5" /><rect x="582" y="340" width="60" height="52" fill="#FFFFFF" rx="5" />
+<!-- apoteker -->
+<g transform="translate(470,302) scale(0.98)">
+    <path d="M0 -74 C22 -74 32 -56 32 -36 C32 -8 20 4 0 4 C-20 4 -32 -8 -32 -36 C-32 -56 -22 -74 0 -74 Z" fill="#6BA318" />
+         <path d="M-14 -58 C-4 -66 8 -66 16 -58 C20 -44 18 -30 8 -24 C-2 -20 -12 -28 -16 -40 Z" fill="#F2C9A8" />
+    <path d="M-30 0 C-30 -6 30 -6 30 0 L34 56 L-34 56 Z" fill="#FFFFFF" stroke="#D3EDA8" stroke-width="3"/>
+  </g>
+<!-- pasien di depan konter -->
+<g transform="translate(662,326) scale(0.95)">
+    <circle cx="0" cy="-46" r="26" fill="#F2C9A8" /><path d="M-26 -52 C-22 -76 22 -76 26 -52 C18 -62 -16 -64 -26 -52 Z" fill="#0D2B20" />
+    <path d="M-30 -22 C-30 -30 30 -30 30 -22 L34 56 L-34 56 Z" fill="#2A7FAE" />
+  </g>
+<!-- papan nama -->
+<rect x="400" y="84" width="330" height="76" fill="#6BA318" rx="12" />
+<circle cx="438" cy="122" r="20" fill="#FFFFFF" opacity=".9"/>
+<path d="M430 122 h16 M438 114 v16" fill="none" stroke="#6BA318" stroke-width="4" stroke-linecap="round"/>
+<rect x="472" y="108" width="210" height="12" fill="#FFFFFF" rx="6" opacity=".9"/>
+<rect x="472" y="128" width="140" height="10" fill="#B5DF73" rx="5" />
+<g transform="translate(756,410) scale(0.75)">
+    <path d="M0 0 C-34 -14 -46 -52 -30 -84 C-4 -66 4 -34 0 0 Z" fill="#85C226" />
+    <path d="M0 0 C34 -18 44 -58 26 -88 C2 -66 -4 -32 0 0 Z" fill="#6BA318" />
+    <path d="M0 -4 C-8 -40 4 -78 24 -96 C22 -60 12 -26 0 -4 Z" fill="#B5DF73" />
+    <path d="M-26 0 L26 0 L20 38 L-20 38 Z" fill="#F7D9A0" />
+    <rect x="-30" y="-6" width="60" height="12" fill="#E9B96B" rx="4" />
+  </g>
+</g></svg>

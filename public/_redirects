@@ -1,0 +1,5 @@
+# Rewrite /admin -> /admin/index.html (tanpa ubah URL)
+  /admin              /admin/index.html          200
+  # Fallback 404 kustom
+  /*                  /404.html                  404
+  
