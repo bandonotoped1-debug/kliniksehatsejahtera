@@ -12,7 +12,7 @@
 
 const CONFIG = {
   // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
+  domain: (process.env.SITE_URL || process.env.URL || 'http://kliniksehatsejahtera.netlify.app/').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
   shortName: 'Klinik SSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
