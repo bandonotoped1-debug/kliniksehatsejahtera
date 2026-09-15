@@ -1,0 +1,14 @@
+{
+  "name": "klinik-sehat-sejahtera",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Situs + PWA Klinik Pratama Sehat Sejahtera Blitar (static site generator)",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && npx --yes serve public -l 5173",
+    "preview": "npx --yes serve public -l 5173"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
