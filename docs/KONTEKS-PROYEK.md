@@ -36,7 +36,7 @@ backend/Code.gs    ← seluruh backend (Google Apps Script + Spreadsheet)
 yang ditulis tangan dan tidak dihasilkan generator:
 
 - `public/assets/css/style.css`
-- `public/assets/js/app.js`, `forms.js`, `antrean.js`, `admin.js`, `admin-konten.js`
+- `public/assets/js/app.js`, `forms.js`, `antrean.js`, `status.js`, `admin.js`, `admin-konten.js`
 - `public/admin/index.html`
 
 Berkas HTML lain di `public/` **ditimpa setiap build** — jangan diedit
@@ -71,6 +71,18 @@ Di `backend/Code.gs`:
 | `LEWATI_N` | 2 | Dilewati 2 pasien, lalu dipanggil kembali |
 | `MAKS_PUTARAN` | 1 | Dikembalikan sekali; sesudahnya butuh tindakan admin |
 
+- Tombol **Konfirmasi** di tab Pendaftaran bukan sekadar mengganti status:
+  pasiennya langsung masuk papan antrean hari ini sebagai pasien
+  **online**, lalu tampilan berpindah ke tab Antrean. Karena masuk sebagai
+  online, aturan "offline didahulukan" tetap berlaku — kalau antrean online
+  belum dibuka ia berstatus `tunggu` dan nomornya keluar saat tombol Buka
+  Antrean Online ditekan. Baris antrean menyimpan `regId` supaya satu
+  pendaftaran tidak bisa masuk papan dua kali; **Batal** mencabut nomornya.
+  Pendaftaran yang tanggal kunjungannya bukan hari ini, atau layanannya di
+  luar Poli Umum/Gigi, hanya berubah status dan alasannya ditampilkan.
+- Formulir **Tambah ke Antrean** (pasien datang langsung) memakai kolom yang
+  sama dengan pendaftaran online — nama, umur, WA, jenis & nomor kartu,
+  alamat, keluhan — agar datanya sama lengkap. Hanya poli dan nama yang wajib.
 - Pasien **offline (datang langsung) selalu didahulukan**. Admin mencatat
   mereka dulu, lalu menekan **Buka Antrean Online** — barulah pendaftar
   online mendapat nomor, mengantre di belakang.
@@ -99,6 +111,36 @@ Di `backend/Code.gs`:
 - 06.00–11.30 pelayanan praktek
 - **11.30–13.00 administrasi apotek — tidak melayani praktek**
 - 17.00–20.30 operasional malam
+- Apotek Mahira Farma (tiga cabang): 07.00–21.00 setiap hari
+
+### Status buka/tutup dihitung, bukan ditulis
+Kartu di beranda dan papan antrean **tidak lagi memuat teks status yang
+dipatok** ("Buka", "Kuota 8"). Semuanya dihitung dari satu sumber:
+`CONFIG.statusBaris` di `src/data/site.js`.
+
+| Baris | Jadwal |
+|---|---|
+| Poli Umum | Sen–Sab 06.00–11.30 & 17.00–20.30 |
+| Poli Gigi | Sen–Sab 08.00–10.00; Sen/Rab/Jum 18.00–20.00 |
+| Khitan | tanpa jam — selalu "Perjanjian" |
+| Apotek | tiap hari 07.00–21.00 |
+
+`public/assets/js/status.js` dipakai **dua kali**: di-`require` build.js
+untuk mengisi HTML awal, dan berjalan di browser untuk menghitung ulang
+tiap 30 detik. Jadi halaman yang lama terbuka atau diambil dari cache
+service worker tidak pernah menampilkan "Buka" di tengah malam. Jam
+selalu dihitung di **Asia/Jakarta lewat `Intl`**, bukan jam perangkat
+pengunjung — jangan diganti `new Date().getHours()`.
+
+Lencana **Live** di kepala kartu menyala bila ada satu poli pun yang
+sedang buka; di luar itu "Tutup".
+
+### Dokter izin
+Saklar per poli per sesi di tab Antrean panel admin. Disimpan di Script
+Property `IZIN_HARI` dan **hangus sendiri saat tanggal berganti**.
+Halaman publik membacanya lewat `?action=status` (tiap 5 menit), jadi
+efeknya langsung tanpa menekan Terbitkan dan tanpa build ulang. Kalau
+permintaan itu gagal, halaman tetap berjalan memakai jadwal biasa.
 
 ### Tenaga medis
 | Nama | Poli | Jadwal |
@@ -107,7 +149,7 @@ Di `backend/Code.gs`:
 | dr. Wasingah | Umum | Sen–Jum 06.00–08.00 & 17.00–20.30; Sabtu malam saja |
 | dr. Monalisa | Umum | Jum & Sab 08.00–11.30 |
 | drg. Maylia Widiastuti | Gigi | Sen–Sab 08.00–10.00 |
-| drg. Lailiz Zulfa | Gigi | Sen, Rab, Jum 17.00–20.00 |
+| drg. Lailiz Zulfa | Gigi | Sen, Rab, Jum 18.00–20.00 |
 
 Bagian **apoteker hanya menampilkan nama** — tidak boleh ada tombol
 janji temu. Nama apoteker masih placeholder.
@@ -118,6 +160,12 @@ janji temu. Nama apoteker masih placeholder.
 | Admin pendaftaran | 0896-5350-2700 |
 | Admin khitan | 0878-4030-1148 |
 | Admin Top Dokter | 0857-5559-1040 |
+| Admin bekam & vaksinasi umrah/haji | 0857-5559-1040 |
+
+Nomor per layanan ada di **dua tempat** dan harus sama: `waByService`
+(`src/data/site.js`) untuk sisi situs, dan `waTujuanLayanan_()`
+(`backend/Code.gs`, memakai Script Property `WA_ADMIN_KHITAN` /
+`WA_BEKAM_VAKSIN`) untuk notifikasi ke admin.
 
 ### Informasi yang disembunyikan dari publik
 "Arah Pengembangan Klinik" hanya tampil di panel admin (tab Rekap &
@@ -159,6 +207,14 @@ Sekarang ada fallback yang membentuk judul & kata kunci otomatis.
 Layanan/artikel yang dihapus tetap tertinggal di `public/` dan URL
 lamanya masih bisa dibuka. `build.js` kini menghapus HTML di
 `public/layanan/` dan `public/artikel/` yang tidak ada di daftar.
+
+### Kolom baru tidak muncul di spreadsheet lama
+`HEADERS` di `backend/Code.gs` dulu hanya dipakai saat sheet **dibuat**.
+Menambah kolom (mis. `regId`) tidak berpengaruh pada spreadsheet yang sudah
+ada — nilainya ditulis ke kolom tanpa judul lalu hilang saat dibaca.
+Sekarang `sheet_()` menambahkan judul kolom yang kurang di ujung kanan,
+sekali per eksekusi. Karena itu **kolom baru selalu ditaruh paling belakang**
+di `HEADERS`, jangan disisipkan di tengah.
 
 ### `ANTREAN_POLI` harus sama di dua tempat
 `backend/Code.gs` dan `src/data/site.js` (`ANTREAN.poli`). Kalau beda,
