@@ -106,12 +106,36 @@ Di `backend/Code.gs`:
   (`tanpaBiaya: true`). Terhubung ke WA admin 0857-5559-1040.
 - Fitur **testimoni sudah dihapus seluruhnya** atas permintaan pemilik —
   jangan dihidupkan kembali.
+- Alur pelayanan langkah 4 berbunyi **"Penebusan obat"**: resep diteruskan
+  ke **Depo Farmasi klinik** lebih dulu; baru bila obatnya kosong pasien
+  diarahkan ke apotek terdekat atau cabang Apotek Mahira Farma. Janji
+  "jadwal kontrol diingatkan lewat WhatsApp" **dihapus** — belum ada yang
+  menjalankannya, jadi jangan ditulis ulang.
 
 ### Jam operasional
 - 06.00–11.30 pelayanan praktek
 - **11.30–13.00 administrasi apotek — tidak melayani praktek**
 - 17.00–20.30 operasional malam
 - Apotek Mahira Farma (tiga cabang): 07.00–21.00 setiap hari
+
+### Jenis kartu pasien
+Satu sumber: `CONFIG.jenisKartu` di `src/data/site.js`, dipakai formulir
+pendaftaran online, formulir antrean panel admin, dan aturan pemeriksaan
+di `forms.js`. Menambah jenis kartu cukup di sana.
+
+| Jenis | Aturan nomor |
+|---|---|
+| KTP / KIA / KK | 16 digit pasti |
+| BPJS | 13 digit pasti |
+| **RM (rekam medis)** | **bebas bentuk**, minimal 3 karakter |
+| Lainnya | angka, minimal 6 digit |
+
+Nomor rekam medis klinik **tidak seragam** — bisa pendek dan memakai
+huruf (`RM-00123`). Karena itu `format: 'bebas'`: penyaring huruf di
+`forms.js` dan `noKartu_()` di `backend/Code.gs` dilonggarkan khusus
+untuk jenis ini (lihat `KARTU_BEBAS`). Kalau disaring jadi digit seperti
+NIK, isian pasien akan **terbuang diam-diam**. Bila menambah jenis kartu
+bebas bentuk yang baru, daftarkan di **dua tempat** itu.
 
 ### Status buka/tutup dihitung, bukan ditulis
 Kartu di beranda dan papan antrean **tidak lagi memuat teks status yang
@@ -215,6 +239,33 @@ ada — nilainya ditulis ke kolom tanpa judul lalu hilang saat dibaca.
 Sekarang `sheet_()` menambahkan judul kolom yang kurang di ujung kanan,
 sekali per eksekusi. Karena itu **kolom baru selalu ditaruh paling belakang**
 di `HEADERS`, jangan disisipkan di tengah.
+
+### Editor konten membuang kunci yang tidak punya kolom
+`kontenSimpan` dulu menyusun objek **dari nol** hanya dari kolom yang
+ada di `SKEMA`. Koleksi daftar (layanan, dokter, apotek, artikel)
+ditimpa seluruhnya oleh `src/konten.js` saat build, jadi kunci yang
+tidak punya kolom formulir **lenyap begitu item disunting** — tautan
+Google Maps dan catatan cabang apotek hilang dengan cara ini, dan
+tombol "Peta" ikut mati. Sekarang penyimpanan berangkat dari isi lama
+lalu kolom formulir menimpa atau menghapusnya. Kalau menambah kunci
+baru di `src/data/site.js`, **tetap daftarkan kolomnya di `SKEMA`**
+agar bisa diedit; kunci tanpa kolom kini aman, tapi tidak terlihat.
+
+Koleksi `config` tidak terkena ini karena di-`Object.assign`, bukan
+ditimpa.
+
+### Kolom bersarang di editor konten
+Alamat klinik (`CONFIG.address`) berupa objek, bukan teks. Editor punya
+tipe kolom **`grup`** dengan daftar `sub` — dirender sebagai beberapa
+isian lalu dirakit kembali jadi satu objek saat disimpan. Aturannya:
+
+- Bila kunci itu belum ada di CMS, isian diambil dari `KLINIK_BAWAAN`
+  supaya admin tidak melihat kotak kosong padahal situs ada isinya.
+- Bila **semua** isian dikosongkan, kuncinya **tidak ditulis** — menulis
+  objek kosong akan menimpa data bawaan situs dengan kekosongan.
+- Sub-kunci tanpa isian (mis. `country`) terbawa utuh dari isi lama.
+- `cek: 'url' | 'lintang' | 'bujur'` memvalidasi isian sebelum disimpan.
+  Koordinat wajib memakai titik, bukan koma.
 
 ### `ANTREAN_POLI` harus sama di dua tempat
 `backend/Code.gs` dan `src/data/site.js` (`ANTREAN.poli`). Kalau beda,

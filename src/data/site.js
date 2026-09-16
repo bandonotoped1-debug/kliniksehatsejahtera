@@ -12,7 +12,7 @@
 
 const CONFIG = {
   // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'http://kliniksehatsejahtera.netlify.app/').replace(/\/+$/, ''),
+  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
   shortName: 'Klinik SSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
@@ -52,6 +52,27 @@ const CONFIG = {
     { sesi: 'Malam', jam: '17.00 – 20.30', isi: 'Pelayanan praktek',
       ket: 'Operasional malam untuk Poli Umum dan Poli Gigi sesuai jadwal dokter.', buka: true }
   ],
+  /* --------------------------------------------- JENIS KARTU
+   * Sumber tunggal pilihan "Jenis kartu" — dipakai formulir pendaftaran
+   * online (src/pages.js), formulir antrean di panel admin, dan aturan
+   * pemeriksaan nomornya di assets/js/forms.js.
+   *
+   *   format 'angka' : hanya digit. `panjang` = jumlah digit yang pasti,
+   *                    tanpa `panjang` berarti minimal `min` digit.
+   *   format 'bebas' : boleh huruf, angka, titik, garis, dan garis miring
+   *                    — nomor rekam medis klinik tidak seragam bentuknya.
+   */
+  jenisKartu: [
+    { v: 'KTP',  l: 'KTP / NIK',            format: 'angka', panjang: 16, ph: '16 digit NIK pada KTP' },
+    { v: 'BPJS', l: 'Kartu BPJS Kesehatan', format: 'angka', panjang: 13, ph: '13 digit nomor kartu BPJS' },
+    { v: 'KIA',  l: 'KIA (anak)',           format: 'angka', panjang: 16, ph: '16 digit NIK pada KIA anak' },
+    { v: 'KK',   l: 'Kartu Keluarga',       format: 'angka', panjang: 16, ph: '16 digit nomor Kartu Keluarga' },
+    { v: 'RM',   l: 'No. Rekam Medis (pasien lama)', format: 'bebas', min: 3,
+      ph: 'Contoh: RM-00123 atau 00123',
+      h: 'Ada di kartu berobat atau struk kunjungan sebelumnya. Mempercepat pencarian berkas Anda di loket.' },
+    { v: 'Lainnya', l: 'Asuransi / lainnya', format: 'angka', min: 6, ph: 'Nomor kartu/polis asuransi' }
+  ],
+
   /* ------------------------------------------- STATUS REAL-TIME
    * Sumber tunggal jam buka untuk kartu status di beranda dan papan
    * antrean. Dipakai dua kali: dirender saat build, lalu dihitung ulang
@@ -99,7 +120,7 @@ const CONFIG = {
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
   // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbwy8LRWVTjzzvhQz_LQJ55lJ0mFvIgndDo37eXxLNUWlpy2o-KqZFl4CL7ldYufQdFJ/exec',
+  gasUrl: 'https://script.google.com/macros/s/AKfycbyN1IPoVCCQ5q8DHVLWjaq6AYN1C5L0gFQNEb7KTIFAH-woGrsgVC4uTxG-B0gd9Rmz/exec',
   gaId: '' // opsional: 'G-XXXXXXX'
 };
 

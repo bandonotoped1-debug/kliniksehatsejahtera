@@ -105,8 +105,11 @@
         { k: 'badge', l: 'Label', t: 'teks' },
         { k: 'area', l: 'Wilayah', t: 'teks' },
         { k: 'address', l: 'Alamat', t: 'area' },
+        { k: 'maps', l: 'Tautan Google Maps', t: 'teks', cek: 'url',
+          h: 'Buka Google Maps → cari cabangnya → Share/Bagikan → Copy link, lalu tempel di sini. Dipakai tombol "Peta". Kosongkan bila tombol Peta tidak perlu ditampilkan.' },
         { k: 'phone', l: 'Nomor WhatsApp', t: 'teks', h: 'Format internasional tanpa +. Contoh: 628123456789' },
-        { k: 'hours', l: 'Jam buka', t: 'teks' }
+        { k: 'hours', l: 'Jam buka', t: 'teks', h: 'Contoh: 07.00 – 21.00 (Senin – Minggu)' },
+        { k: 'note', l: 'Catatan cabang', t: 'area', h: 'Kalimat di bawah jam buka. Contoh: Melayani penebusan resep dan alat kesehatan harian.' }
       ]
     },
     produk: {
@@ -150,6 +153,23 @@
       { k: 'waNumber', l: 'Nomor WhatsApp utama', t: 'teks', h: 'Format internasional tanpa +. Contoh: 6289653502700' },
       { k: 'waDisplay', l: 'Nomor WhatsApp (tampilan)', t: 'teks' },
       { k: 'email', l: 'Email', t: 'teks' },
+      /* Alamat berupa objek bersarang — dipakai footer, halaman Kontak,
+         dan data schema.org (geo). Semua bagiannya diedit di satu blok. */
+      { k: 'address', l: 'Alamat & titik peta klinik', t: 'grup',
+        h: 'Dipakai di footer, halaman Kontak, dan data lokasi untuk Google.',
+        sub: [
+          { k: 'street', l: 'Jalan / perumahan', t: 'teks' },
+          { k: 'district', l: 'Kecamatan', t: 'teks' },
+          { k: 'city', l: 'Kota / kabupaten', t: 'teks' },
+          { k: 'region', l: 'Provinsi', t: 'teks' },
+          { k: 'postal', l: 'Kode pos', t: 'teks' },
+          { k: 'mapsUrl', l: 'Tautan Google Maps', t: 'teks', cek: 'url',
+            h: 'Tombol "Buka di Google Maps". Salin dari Google Maps → Share → Copy link.' },
+          { k: 'lat', l: 'Lintang (latitude)', t: 'angka', cek: 'lintang',
+            h: 'Contoh: -8.0846. Pakai titik, bukan koma.' },
+          { k: 'lng', l: 'Bujur (longitude)', t: 'angka', cek: 'bujur',
+            h: 'Contoh: 112.1770. Di Google Maps, klik kanan titik lokasi → angka pertama lintang, kedua bujur.' }
+        ] },
       { k: 'jadwalHarian', l: 'Jam operasional', t: 'jam', h: 'Satu baris satu sesi.' }
     ],
     teks: [
@@ -285,6 +305,13 @@
   /* ============================================== FORMULIR ===== */
   var sedang = null;
 
+  /** Isi bawaan situs untuk satu kelompok "Info Klinik" — dipakai sebagai
+      isian awal bila kunci itu belum pernah tersimpan di CMS. */
+  function bawaanConfig(id) {
+    var b = window.KLINIK_BAWAAN || {};
+    return (b.config || []).filter(function (x) { return x.__id === id; })[0] || {};
+  }
+
   function fieldUntuk(kol, id) {
     if (kol === 'config') return FIELD_CONFIG[id] || [{ k: 'catatan', l: 'Data (JSON)', t: 'area' }];
     return SKEMA[kol].field;
@@ -320,7 +347,15 @@
     var d = id ? (K.data[K.koleksi] || []).filter(function (x) { return x.__id === id; })[0] : null;
     var baru = !d;
     if (!d) d = {};
-    sedang = { koleksi: K.koleksi, idLama: id || '', baru: baru };
+    /* Isi aslinya ikut disimpan: koleksi daftar ditimpa seluruhnya saat build,
+       jadi kunci yang tidak punya kolom di formulir harus dibawa kembali —
+       kalau tidak, ia lenyap begitu item disunting. */
+    var asal = {};
+    Object.keys(d).forEach(function (k) {
+      if (k === '__id' || k === '__urut' || k === '__aktif') return;
+      asal[k] = d[k];
+    });
+    sedang = { koleksi: K.koleksi, idLama: id || '', baru: baru, asal: asal };
 
     var fields = fieldUntuk(K.koleksi, id || '');
     var html = '<div class="kt-f"><label>ID item ' + (sk.kunci ? '' : '<span class="req">*</span>') + '</label>' +
@@ -331,6 +366,25 @@
       var v = nilaiKe(f.t, d[f.k]);
       var kb = 'f-' + f.k;
       var inti;
+
+      /* Kolom bersarang (mis. alamat klinik): satu blok berisi beberapa isian.
+         Bila item CMS belum punya kunci ini, isinya diambil dari data bawaan
+         situs supaya admin tidak melihat kotak kosong padahal situs ada isinya. */
+      if (f.t === 'grup') {
+        var isi = (d[f.k] && typeof d[f.k] === 'object') ? d[f.k]
+          : (K.koleksi === 'config' ? (bawaanConfig(id)[f.k] || {}) : {});
+        var dalam = f.sub.map(function (sf) {
+          var sid = kb + '__' + sf.k;
+          var sv = isi[sf.k] == null ? '' : isi[sf.k];
+          return '<div class="kt-f"><label for="' + sid + '">' + esc(sf.l) + '</label>' +
+            '<input id="' + sid + '" value="' + esc(sv) + '">' +
+            (sf.h ? '<span class="kt-h">' + sf.h + '</span>' : '') + '</div>';
+        }).join('');
+        return '<div class="kt-f full kt-grup"><label>' + esc(f.l) + '</label>' +
+          (f.h ? '<span class="kt-h">' + f.h + '</span>' : '') +
+          '<div class="kt-grup-in">' + dalam + '</div></div>';
+      }
+
       if (f.t === 'centang') {
         inti = '<label class="kt-cek"><input type="checkbox" id="' + kb + '"' + (d[f.k] ? ' checked' : '') + '> <span>' + esc(f.l) + '</span></label>';
         return '<div class="kt-f full">' + inti + (f.h ? '<span class="kt-h">' + f.h + '</span>' : '') + '</div>';
@@ -373,18 +427,64 @@
     }
 
     var fields = fieldUntuk(kol, sedang.idLama || id);
-    var data = {}, kurang = [];
+    /* Berangkat dari isi lama, lalu tiap kolom formulir menimpa atau
+       menghapusnya. Kunci yang tidak punya kolom (mis. gambar, data
+       lama) ikut terbawa utuh dan tidak hilang diam-diam. */
+    var data = JSON.parse(JSON.stringify(sedang.asal || {}));
+    var kurang = [], salah = [];
+
+    var cekIsi = function (aturan, label, nilai) {
+      if (!aturan || nilai === '') return true;
+      if (aturan === 'url' && !/^https?:\/\//i.test(nilai)) {
+        salah.push('<strong>' + esc(label) + '</strong> harus diawali https://'); return false;
+      }
+      if (aturan === 'lintang' || aturan === 'bujur') {
+        var n = Number(nilai);
+        var batas = aturan === 'lintang' ? 90 : 180;
+        if (!isFinite(n) || Math.abs(n) > batas) {
+          salah.push('<strong>' + esc(label) + '</strong> harus berupa angka (pakai titik, bukan koma)'); return false;
+        }
+      }
+      return true;
+    };
+
     fields.forEach(function (f) {
+      /* Kolom bersarang: rakit kembali jadi satu objek. Bagian yang tidak
+         punya isian (mis. kode negara) ikut terbawa dari isi lama. */
+      if (f.t === 'grup') {
+        var lama = (sedang.asal && typeof sedang.asal[f.k] === 'object' && sedang.asal[f.k]) || {};
+        var obj = JSON.parse(JSON.stringify(lama));
+        var adaIsi = false;
+        f.sub.forEach(function (sf) {
+          var sel = $('#f-' + f.k + '__' + sf.k); if (!sel) return;
+          var raw = String(sel.value == null ? '' : sel.value).trim();
+          if (!cekIsi(sf.cek, sf.l, raw)) return;
+          if (raw === '') { delete obj[sf.k]; return; }
+          obj[sf.k] = sf.t === 'angka' ? Number(raw) : raw;
+          adaIsi = true;
+        });
+        /* Jangan pernah menulis objek kosong — itu akan menimpa data bawaan
+           situs dengan kekosongan. Lebih baik kuncinya tidak ditulis. */
+        if (adaIsi) data[f.k] = obj; else delete data[f.k];
+        return;
+      }
+
       var el = $('#f-' + f.k); if (!el) return;
       var v = f.t === 'centang' ? el.checked : nilaiDari(f.t, el.value);
       if (f.wajib && (v === '' || v == null)) kurang.push(f.l);
-      if (f.t === 'centang') { if (v) data[f.k] = true; }
+      if (f.cek && typeof v === 'string') cekIsi(f.cek, f.l, v.trim());
+      if (f.t === 'centang') { if (v) data[f.k] = true; else delete data[f.k]; }
       else if (v !== '' && !(Array.isArray(v) && !v.length)) data[f.k] = v;
+      else delete data[f.k];
     });
 
     if (kurang.length) {
       box.className = 'fstatus show bad';
       box.innerHTML = '<div>Masih kosong: <strong>' + esc(kurang.join(', ')) + '</strong>.</div>'; return;
+    }
+    if (salah.length) {
+      box.className = 'fstatus show bad';
+      box.innerHTML = '<div>' + salah.join('<br>') + '</div>'; return;
     }
     if ((kol === 'services' || kol === 'articles') && data.slug && data.slug !== id) {
       box.className = 'fstatus show bad';

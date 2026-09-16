@@ -31,6 +31,7 @@ const STATUS = require('../public/assets/js/status.js');
 const STATUS_BARIS = CONFIG.statusBaris || [];
 const waktuBuild = STATUS.sekarangWIB();
 const klinikAwal = STATUS.hitungKlinik(STATUS_BARIS, waktuBuild);
+const JENIS_KARTU = CONFIG.jenisKartu || [];
 
 
 /* Seksi "Ikuti Kami" — IG & FB klinik + IG apotek */
@@ -201,7 +202,7 @@ function home() {
           <li>${icon('clock')}<span>${esc(p.hours)}</span></li>
           <li>${icon('check-circle')}<span>${esc(p.note)}</span></li>
           <div class="pharm-act">
-            <a class="btn btn-ghost" href="${p.maps}" target="_blank" rel="noopener">${icon('map-pin')} Peta</a>
+            ${p.maps ? `<a class="btn btn-ghost" href="${esc(p.maps)}" target="_blank" rel="noopener">${icon('map-pin')} Peta</a>` : ''}
             <a class="btn btn-wa" href="${waLink('Halo Apotek ' + p.name + ' (' + p.area + '), saya ingin menanyakan ketersediaan obat.')}" target="_blank" rel="noopener">${icon('whatsapp')} Tanya Stok</a>
           </div>
         </div>
@@ -452,7 +453,7 @@ ${phead('stethoscope', 'Layanan', 'Lima layanan unggulan yang saling terhubung',
         ['Daftar online', 'Isi formulir di situs ini atau kirim data lewat WhatsApp. Kurang dari 2 menit.'],
         ['Konfirmasi antrean', 'Admin membalas dengan nomor antrean dan perkiraan jam dilayani.'],
         ['Pemeriksaan', 'Datang sesuai jadwal. Anda diperiksa dokter tanpa terburu-buru.'],
-        ['Obat &amp; kontrol', 'Resep langsung diteruskan ke Apotek Mahira Farma. Jadwal kontrol diingatkan lewat WhatsApp.']
+        ['Penebusan obat', 'Resep langsung diteruskan ke Depo Farmasi klinik. Bila obatnya sedang kosong, Anda diarahkan ke apotek terdekat atau cabang Apotek Mahira Farma.']
       ].map((s, i) => `<article class="card rv" style="transition-delay:${i * 60}ms">
         <div class="card-ic" style="font-family:var(--ff-h);font-weight:800;font-size:20px">${i + 1}</div>
         <h3>${s[0]}</h3><p>${s[1]}</p></article>`).join('')}
@@ -798,7 +799,7 @@ ${phead('pill', 'Apotek Mahira Farma', 'Tiga cabang apotek, satu standar pelayan
           <li>${icon('clock')}<span>${esc(p.hours)}</span></li>
           <li>${icon('check-circle')}<span>${esc(p.note)}</span></li>
           <div class="pharm-act">
-            <a class="btn btn-ghost" href="${p.maps}" target="_blank" rel="noopener">${icon('map-pin')} Peta</a>
+            ${p.maps ? `<a class="btn btn-ghost" href="${esc(p.maps)}" target="_blank" rel="noopener">${icon('map-pin')} Peta</a>` : ''}
             <a class="btn btn-wa" href="${waLink('Halo Apotek ' + p.name + ' (' + p.area + '), saya ingin menanyakan ketersediaan obat.')}" target="_blank" rel="noopener">${icon('whatsapp')} Tanya Stok</a>
           </div>
         </div></article>`).join('')}
@@ -925,19 +926,15 @@ ${phead('calendar', 'Pendaftaran Online', 'Daftar dari rumah, datang tinggal mas
 
             <div class="field"><label for="jenisKartu">Jenis kartu</label>
               <select id="jenisKartu" name="jenisKartu">
-                <option value="KTP">KTP / NIK</option>
-                <option value="BPJS">Kartu BPJS Kesehatan</option>
-                <option value="KIA">KIA (anak)</option>
-                <option value="KK">Kartu Keluarga</option>
-                <option value="Lainnya">Asuransi / lainnya</option>
+                ${JENIS_KARTU.map(k => `<option value="${esc(k.v)}">${esc(k.l)}</option>`).join('\n                ')}
               </select>
-              <div class="hint">Pilih kartu yang akan Anda bawa saat datang.</div></div>
+              <div class="hint">Pilih kartu yang akan Anda bawa saat datang. Pasien lama boleh memakai nomor rekam medis.</div></div>
 
-            <div class="field"><label for="noKartu">Nomor KTP / kartu</label>
+            <div class="field"><label for="noKartu">Nomor kartu / rekam medis</label>
               <input id="noKartu" name="noKartu" inputmode="numeric" autocomplete="off"
-                     pattern="[0-9 .-]{6,25}" maxlength="25" placeholder="16 digit NIK atau nomor kartu">
+                     maxlength="30" placeholder="${esc(JENIS_KARTU[0].ph || '')}">
               <div class="hint">Opsional — mempercepat pendaftaran di loket. Bisa diisi saat datang.</div>
-              <div class="err">Nomor kartu hanya boleh angka, minimal 6 digit.</div></div>
+              <div class="err">Nomor yang diisi belum sesuai jenis kartu yang dipilih.</div></div>
 
             <div class="field full"><label for="alamat">Alamat <span class="req">*</span></label>
               <input id="alamat" name="alamat" required placeholder="Contoh: Jl. Melati 12, Karangtengah, Sananwetan">

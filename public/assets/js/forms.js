@@ -139,31 +139,61 @@
     fDaftar.addEventListener('change', syncNote);
     syncNote();
 
+    /* Petunjuk & aturan isian mengikuti jenis kartu yang dipilih.
+       Nomor rekam medis sengaja dibiarkan bebas bentuk — di klinik
+       nomornya bisa pendek dan memakai huruf ("RM-00123"), jadi kalau
+       dipaksa 6 digit angka seperti kartu lain, isiannya akan terbuang. */
+    var jk = $('#jenisKartu'), nk = $('#noKartu');
+    var DAFTAR_KARTU = CFG.jenisKartu || [];
+    var kartuAktif = function () {
+      var v = jk ? jk.value : '';
+      return DAFTAR_KARTU.filter(function (k) { return k.v === v; })[0] || DAFTAR_KARTU[0] || { format: 'angka', min: 6 };
+    };
+
     fDaftar.addEventListener('input', function (e) {
       if (e.target.matches('[required]')) markInvalid(e.target, false);
       if (e.target.id === 'noKartu') {
-        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 20);
+        var k = kartuAktif();
+        e.target.value = k.format === 'bebas'
+          ? e.target.value.replace(/[^A-Za-z0-9 ./-]/g, '').slice(0, 30)
+          : e.target.value.replace(/[^0-9]/g, '').slice(0, 20);
         markInvalid(e.target, false);
       }
     });
 
-    /* Petunjuk menyesuaikan jenis kartu yang dipilih */
-    var jk = $('#jenisKartu'), nk = $('#noKartu');
     function syncKartu() {
       if (!jk || !nk) return;
-      var t = {
-        KTP: ['16 digit NIK pada KTP', 16],
-        BPJS: ['13 digit nomor kartu BPJS', 13],
-        KIA: ['16 digit NIK pada KIA anak', 16],
-        KK: ['16 digit nomor Kartu Keluarga', 16],
-        Lainnya: ['Nomor kartu/polis asuransi', 0]
-      }[jk.value] || ['Nomor kartu', 0];
-      nk.placeholder = t[0];
-      nk.dataset.panjang = t[1] || '';
+      var k = kartuAktif();
+      nk.placeholder = k.ph || 'Nomor kartu';
+      nk.inputMode = k.format === 'bebas' ? 'text' : 'numeric';
       var hint = nk.parentNode.querySelector('.hint');
-      if (hint) hint.textContent = 'Opsional — ' + t[0].toLowerCase() + '. Bisa juga diisi saat datang.';
+      if (hint) {
+        hint.textContent = k.h
+          ? 'Opsional — ' + k.h
+          : 'Opsional — ' + String(k.ph || 'nomor kartu').toLowerCase() + '. Bisa juga diisi saat datang.';
+      }
+      /* Nomor yang sudah diketik untuk jenis lain ikut dibersihkan
+         agar tidak terbawa dalam bentuk yang tidak sah. */
+      if (nk.value) nk.value = k.format === 'bebas'
+        ? nk.value.replace(/[^A-Za-z0-9 ./-]/g, '').slice(0, 30)
+        : nk.value.replace(/[^0-9]/g, '').slice(0, 20);
+      markInvalid(nk, false);
     }
     if (jk) { jk.addEventListener('change', syncKartu); syncKartu(); }
+
+    /** Pesan kesalahan bila nomor tidak cocok dengan jenis kartunya. */
+    function salahKartu(k, nilai) {
+      if (!nilai) return '';
+      if (k.format === 'bebas') {
+        return nilai.length < (k.min || 3)
+          ? 'Nomor rekam medis terlalu pendek. Kosongkan saja bila belum ingat — bisa dicari petugas saat Anda datang.' : '';
+      }
+      if (k.panjang && nilai.length !== k.panjang) {
+        return 'Nomor ' + (k.l || k.v) + ' harus ' + k.panjang + ' digit. Kosongkan saja bila belum ingat — bisa diisi saat datang.';
+      }
+      if (!k.panjang && nilai.length < (k.min || 6)) return 'Nomor kartu terlalu pendek. Kosongkan saja bila belum ingat.';
+      return '';
+    }
 
     fDaftar.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -176,12 +206,10 @@
       // Nomor kartu bersifat opsional, tetapi bila diisi harus masuk akal
       var elKartu = $('#noKartu');
       if (elKartu && d.noKartu) {
-        var wajibPanjang = Number(elKartu.dataset.panjang || 0);
-        if (d.noKartu.length < 6 || (wajibPanjang && d.noKartu.length !== wajibPanjang)) {
+        var pesanKartu = salahKartu(kartuAktif(), d.noKartu);
+        if (pesanKartu) {
           markInvalid(elKartu, true);
-          status(box, 'bad', wajibPanjang
-            ? 'Nomor ' + d.jenisKartu + ' harus ' + wajibPanjang + ' digit. Kosongkan saja bila belum ingat — bisa diisi saat datang.'
-            : 'Nomor kartu terlalu pendek. Kosongkan saja bila belum ingat.');
+          status(box, 'bad', pesanKartu);
           elKartu.focus();
           return;
         }

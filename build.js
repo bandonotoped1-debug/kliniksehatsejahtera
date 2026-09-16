@@ -56,7 +56,9 @@ function bangun() {
     pharmacies: PHARMACIES.map(p => ({ name: p.name, area: p.area })),
     antrean: { pollDetik: D.ANTREAN.pollDetik, poli: D.ANTREAN.poli },
     /* Dipakai assets/js/status.js untuk menghitung buka/tutup di browser */
-    statusBaris: CONFIG.statusBaris || []
+    statusBaris: CONFIG.statusBaris || [],
+    /* Dipakai forms.js & panel admin agar pilihan kartu tidak pernah berbeda */
+    jenisKartu: CONFIG.jenisKartu || []
   };
   const ASET_SUMBER = [
     'assets/css/style.css', 'assets/js/app.js', 'assets/js/forms.js',

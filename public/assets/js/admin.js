@@ -132,9 +132,21 @@
     el.innerHTML = '<div>' + msg + '</div>';
   }
 
+  /* Pilihan jenis kartu diambil dari konfigurasi situs agar formulir
+     antrean tidak pernah berbeda dengan formulir pendaftaran online. */
+  function isiJenisKartu() {
+    var sel = $('#qa-jenis'); if (!sel) return;
+    var daftar = CFG.jenisKartu || [];
+    if (!daftar.length) return;                 // biarkan pilihan bawaan di HTML
+    sel.innerHTML = daftar.map(function (k) {
+      return '<option value="' + esc(k.v) + '">' + esc(k.l) + '</option>';
+    }).join('');
+  }
+
   function enter() {
     $('#login').hidden = true;
     $('#app').hidden = false;
+    isiJenisKartu();
     $('#who').textContent = state.user;
     $('#demo-note').hidden = !DEMO;
     load();
@@ -220,7 +232,8 @@
   /* Nomor kartu ditampilkan tersamar; klik untuk membuka nomor penuh
      agar tidak terbaca orang lain saat layar admin terlihat pasien. */
   function kartuSel(d) {
-    var no = String(d.noKartu || '').replace(/[^0-9]/g, '');
+    // Huruf ikut dipertahankan — nomor rekam medis bisa berbentuk "RM-00123".
+    var no = String(d.noKartu || '').replace(/[^A-Za-z0-9]/g, '');
     if (!no) return '<span style="color:var(--muted);font-size:12px">—</span>';
     var jenis = esc(d.jenisKartu || 'Kartu');
     return '<span style="font-size:12px;color:var(--muted)">' + jenis + '</span><br>' +
@@ -540,6 +553,15 @@
   var QA_ISIAN = ['#qa-nama', '#qa-umur', '#qa-hp', '#qa-nik', '#qa-alamat', '#qa-keluhan'];
   var nilai = function (s) { var el = $(s); return el ? (el.value || '').trim() : ''; };
 
+  /* Nomor rekam medis boleh berhuruf dan pendek; kartu lain tetap
+     angka saja. Menyaring semuanya jadi digit akan membuang isian. */
+  function bersihKartu(jenis, no) {
+    var k = (CFG.jenisKartu || []).filter(function (x) { return x.v === jenis; })[0];
+    return (k && k.format === 'bebas')
+      ? String(no).replace(/[^A-Za-z0-9 .\/-]/g, '').slice(0, 30)
+      : String(no).replace(/[^0-9]/g, '').slice(0, 20);
+  }
+
   if (qaForm) qaForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var nama = nilai('#qa-nama');
@@ -553,7 +575,7 @@
       alamat: nilai('#qa-alamat'),
       keluhan: nilai('#qa-keluhan'),
       jenisKartu: nilai('#qa-jenis') || 'KTP',
-      noKartu: nilai('#qa-nik').replace(/[^0-9]/g, ''),
+      noKartu: bersihKartu(nilai('#qa-jenis'), nilai('#qa-nik')),
       sumber: 'offline'
     }).then(function (r) {
       QA.sorot = r.id || '';

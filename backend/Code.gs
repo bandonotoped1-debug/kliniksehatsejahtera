@@ -126,10 +126,23 @@ function safe_(v) {
   return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
 }
 
-/** Nomor kartu/NIK: hanya angka, maksimal 20 digit. Kosong bila tidak diisi. */
-function noKartu_(v) {
-  var d = String(v == null ? '' : v).replace(/[^0-9]/g, '').slice(0, 20);
-  return d.length >= 6 ? "'" + d : '';   // awalan ' agar Spreadsheet tidak mengubahnya jadi notasi ilmiah
+/* Jenis kartu yang nomornya BUKAN deretan digit. Nomor rekam medis
+   klinik bisa pendek dan memakai huruf ("RM-00123"), jadi kalau
+   disaring seperti NIK, isian pasien akan terbuang diam-diam.
+   Daftarnya harus sejalan dengan CONFIG.jenisKartu di src/data/site.js
+   (yang format-nya 'bebas'). */
+var KARTU_BEBAS = ['RM'];
+
+/** Nomor kartu/NIK/rekam medis. Kosong bila tidak diisi atau terlalu pendek. */
+function noKartu_(v, jenis) {
+  var s = String(v == null ? '' : v).trim();
+  // awalan ' agar Spreadsheet tidak mengubahnya jadi notasi ilmiah
+  if (KARTU_BEBAS.indexOf(str_(jenis).toUpperCase()) > -1) {
+    var b = s.replace(/[^A-Za-z0-9 .\/-]/g, '').slice(0, 30);
+    return b.length >= 3 ? "'" + b : '';
+  }
+  var d = s.replace(/[^0-9]/g, '').slice(0, 20);
+  return d.length >= 6 ? "'" + d : '';
 }
 
 function normHp_(v) {
@@ -277,7 +290,7 @@ function simpanPendaftaran_(d, meta) {
     var hp = normHp_(d.hp);
     sheet_(SHEETS.PENDAFTARAN).appendRow([
       id, now_(), safe_(d.nama), safe_(d.umur), safe_(d.alamat), safe_(d.keluhan),
-      hp, safe_(d.jenisKartu), noKartu_(d.noKartu), safe_(d.layanan), safe_(d.tanggal), safe_(d.sesi),
+      hp, safe_(d.jenisKartu), noKartu_(d.noKartu, d.jenisKartu), safe_(d.layanan), safe_(d.tanggal), safe_(d.sesi),
       'Baru', '', safe_(meta.src || 'web')
     ]);
     var antrean = hitungAntrean_(d.tanggal, d.sesi);
@@ -336,7 +349,7 @@ function simpanTopDokter_(d) {
   var id = nextId_(SHEETS.TOPDOKTER, 'TD');
   var hp = normHp_(d.hp);
   sheet_(SHEETS.TOPDOKTER).appendRow([
-    id, now_(), safe_(d.jenisKartu), noKartu_(d.noKartu), safe_(d.nama), safe_(d.umur),
+    id, now_(), safe_(d.jenisKartu), noKartu_(d.noKartu, d.jenisKartu), safe_(d.nama), safe_(d.umur),
     safe_(d.berat), safe_(d.alamat), safe_(d.jenisObat), safe_(d.keluhan), hp, 'Baru', ''
   ]);
 
@@ -476,7 +489,7 @@ function ubahStatusPendaftaran_(d) {
 
 /* ============================================= NOTIFIKASI === */
 function samarKartu_(v) {
-  var d = String(v || '').replace(/[^0-9]/g, '');
+  var d = String(v || '').replace(/[^A-Za-z0-9]/g, '');
   return d ? '•••• ' + d.slice(-4) : '';
 }
 
@@ -887,7 +900,7 @@ function antreanTambah_(d, sumber) {
     sheet_(SHEETS.ANTREAN).appendRow([
       id, today_(), now_(), cfg.slug, no, kode,
       safe_(d.nama), safe_(d.umur), safe_(d.alamat), safe_(d.keluhan),
-      normHp_(d.hp), safe_(d.jenisKartu), noKartu_(d.noKartu), online ? 'online' : 'offline',
+      normHp_(d.hp), safe_(d.jenisKartu), noKartu_(d.noKartu, d.jenisKartu), online ? 'online' : 'offline',
       dapatNomor ? ST.MENUNGGU : 'tunggu', 0, '', '', safe_(d.regId)
     ]);
     simpanMeta_(m);
