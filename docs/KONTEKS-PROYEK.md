@@ -470,14 +470,44 @@ akses; kalau ikut gagal, alamatnya memang mati.
 ini. Kalau deployment baru ternyata proyek lain, menggantinya akan
 membuat situs membaca spreadsheet kosong.
 
-### Batas waktu: pendek, bukan panjang
-Percobaan pertama **12 detik**, ditambah satu percobaan ulang → paling
-lama ±24 detik. Versi pertama memakai 25 detik × 2 = 50 detik, dan
-pemilik klinik langsung mengeluh panelnya *makin lambat* — benar, karena
-pada keadaan gagal yang bertambah cuma waktu menunggunya. Kalau menaikkan
-angka ini lagi, ingat: yang dirasakan pemakai adalah **waktu sampai ada
-kabar**, bukan peluang berhasil. Selama menunggu ditampilkan hitungan
-detik berjalan (`hitungMundur()`) supaya layar tidak terlihat beku.
+### Batas waktu: 20 detik, dan kehabisan waktu TIDAK diulang
+Angka ini **diukur**, bukan ditebak. Balasan `login` sungguhan dari Apps
+Script tercatat **4,3 / 7,9 / 11,1 detik** (rata-rata 7,8). Membuka
+spreadsheet memang mahal; itu lantai yang tidak bisa ditawar.
+
+Riwayat yang perlu diingat supaya tidak berputar lagi:
+
+| Versi | Setelan | Akibat |
+|---|---|---|
+| 1 | tanpa batas | tombol "Memeriksa…" menggantung selamanya |
+| 2 | 25 dtk × 2 percobaan | gagal = 50 detik menunggu; pemilik mengeluh makin lambat |
+| 3 | 12 dtk × 2 | terlalu mepet — 11,1 dtk nyaris kena, dan memang kena di produksi |
+| **4** | **20 dtk, timeout tidak diulang** | sekarang |
+
+Dua aturan yang lahir dari situ:
+
+1. Batas harus **di atas** waktu balasan terburuk yang pernah diukur,
+   bukan angka yang "terasa cepat".
+2. Kehabisan waktu **tidak dicoba ulang** (`err.waktuHabis`). Menunggu
+   20 detik lalu 20 detik lagi hanya menggandakan penderitaan tanpa
+   menambah peluang. Percobaan ulang tetap berlaku untuk putus jaringan,
+   yang gagalnya cepat.
+
+Yang dirasakan pemakai adalah **waktu sampai ada kabar**, bukan peluang
+berhasil. Karena itu selama menunggu ditampilkan hitungan detik berjalan
+(`hitungMundur()`) supaya layar tidak terlihat beku.
+
+### Masuk panel = satu eksekusi, bukan dua
+`login` kini membawa data awalnya sekalian (`loginDenganData_` di
+`Code.gs` mengisi `awal` dengan hasil `daftarSemua_`). Dulu masuk panel
+berarti dua eksekusi berurutan — `login` lalu `list` — jadi petugas
+membayar harga "buka spreadsheet" dua kali (±16 detik).
+
+`awal` dibungkus try/catch: **gagal memuat tabel tidak boleh berarti
+gagal masuk**. Di sisi klien, `enter()` memakai `state.awal` bila ada dan
+jatuh ke `load()` bila tidak — jadi situs yang sudah ter-deploy tetap
+jalan walau Apps Script-nya belum diperbarui. Jangan hapus jalur
+cadangan itu.
 
 ### Muat data panel: satu panggilan, bukan dua
 `load()` dulu memanggil `list` lalu **selalu** `adminDaftar`, padahal
