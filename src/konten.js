@@ -19,7 +19,9 @@ const PETA = {
   partners:   D => D.PARTNERS,
   pharmacies: D => D.PHARMACIES,
   produk:     D => D.PRODUK.daftar,
-  articles:   D => D.ARTICLES
+  articles:   D => D.ARTICLES,
+  lowongan:   D => D.LOWONGAN,
+  testiKhitan: D => D.TESTIMONI_KHITAN
 };
 
 /* item koleksi "config" → objek tunggal yang di-merge */

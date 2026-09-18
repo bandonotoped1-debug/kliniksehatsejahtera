@@ -114,7 +114,7 @@ function header(active = '/') {
     if (n.children) {
       return `<div class="m-group"><span class="m-label">${n.label}</span>
         ${n.children.map(c => `<a href="${c.href}">${c.label}</a>`).join('')}
-        <a href="${n.href}">Semua Layanan</a></div>`;
+        <a href="${n.href}">Semua ${n.label}</a></div>`;
     }
     return `<a class="m-item" href="${n.href}">${n.label}</a>`;
   }).join('');

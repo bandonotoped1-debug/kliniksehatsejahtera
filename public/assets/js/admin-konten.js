@@ -47,6 +47,8 @@
         { k: 'items', l: 'Cakupan layanan', t: 'pasangan', h: 'Satu baris satu poin. Format: Judul :: Penjelasan' },
         { k: 'prep', l: 'Persiapan sebelum datang', t: 'baris', h: 'Satu baris satu poin.' },
         { k: 'faq', l: 'Tanya jawab', t: 'pasangan', h: 'Satu baris satu tanya-jawab. Format: Pertanyaan :: Jawaban' },
+        { k: 'formulir', l: 'Pertanyaan tambahan saat mendaftar', t: 'formulir',
+          h: 'Muncul di halaman pendaftaran begitu layanan ini dipilih. Satu baris satu pertanyaan. Format: Pertanyaan :: tipe :: wajib :: pilihan1|pilihan2. Tipe: teks, area, angka, tanggal, pilih, centang. Tulis "wajib" bila harus diisi, kosongkan bila opsional. Contoh: Usia anak :: angka :: wajib' },
         { k: 'tanpaDaftar', l: 'Layanan informasi saja (tanpa pendaftaran)', t: 'centang' },
         { k: 'tanpaBiaya', l: 'Sembunyikan perkiraan biaya', t: 'centang' }
       ]
@@ -133,6 +135,40 @@
         { k: 'read', l: 'Lama baca', t: 'teks', h: 'Contoh: 4 menit' },
         { k: 'excerpt', l: 'Ringkasan', t: 'area', wajib: true },
         { k: 'body', l: 'Isi artikel', t: 'pasangan', h: 'Satu baris satu bagian. Format: Subjudul :: Isi paragraf' }
+      ]
+    },
+    testiKhitan: {
+      judul: 'Testimoni Khitan', tunggal: 'testimoni', ikon: 'heart',
+      ket: 'Tayang berjalan otomatis di halaman layanan khitan. Hanya yang izinnya dicentang yang ditampilkan — testimoni tanpa centang tersimpan tapi tidak tayang.',
+      label: function (d) { return d.nama || '(tanpa nama)'; },
+      sub: function (d) { return (d.izin ? '✓ tayang' : 'belum ada izin') + (d.usia ? ' · ' + d.usia : ''); },
+      field: [
+        { k: 'nama', l: 'Nama yang ditampilkan', t: 'teks', wajib: true,
+          h: 'Cukup nama depan atau inisial — mis. "Arif (7 th)" atau "Kel. Bpk. S". JANGAN nama lengkap anak: halaman ini publik dan terbaca mesin pencari.' },
+        { k: 'usia', l: 'Usia saat khitan', t: 'teks', h: 'Contoh: 7 tahun' },
+        { k: 'metode', l: 'Metode', t: 'teks', h: 'Contoh: Metode klem' },
+        { k: 'waktu', l: 'Waktu tindakan', t: 'teks', h: 'Cukup bulan & tahun. Contoh: Juni 2026' },
+        { k: 'teks', l: 'Kesan orang tua', t: 'area', h: '1–3 kalimat, apa adanya. Jangan menjanjikan hasil medis tertentu.' },
+        { k: 'gambar', l: 'Tautan foto', t: 'teks', cek: 'url',
+          h: 'Tempel tautan gambar (Google Drive, Instagram, dsb). Pakai foto SUASANA — anak berpakaian lengkap, bersama keluarga, atau ruangan khitan. Jangan foto bagian tubuh. Boleh dikosongkan.' },
+        { k: 'izin', l: 'Orang tua sudah memberi izin foto & kesannya ditayangkan', t: 'centang',
+          h: 'Wajib dicentang agar tayang. Tanpa centang ini, testimoninya tidak muncul di situs.' }
+      ]
+    },
+    lowongan: {
+      judul: 'Lowongan Kerja', tunggal: 'lowongan', ikon: 'users',
+      ket: 'Tayang di halaman /lowongan.html. Kosongkan daftar ini bila klinik sedang tidak membuka lowongan — halamannya otomatis menulis "belum ada lowongan".',
+      label: function (d) { return d.posisi; },
+      sub: function (d) { return (d.tipe || '') + (d.batas ? ' · sampai ' + d.batas : ''); },
+      field: [
+        { k: 'posisi', l: 'Nama posisi', t: 'teks', wajib: true, h: 'Contoh: Perawat Poli Umum' },
+        { k: 'tipe', l: 'Status kerja', t: 'teks', h: 'Contoh: Penuh waktu · Shift pagi & malam' },
+        { k: 'status', l: 'Keadaan lowongan', t: 'pilih', opsi: ['Dibuka', 'Ditutup'],
+          h: 'Pilih Ditutup bila sudah terisi — kartunya tetap tampil tapi diredupkan dan tombol lamar hilang.' },
+        { k: 'batas', l: 'Batas lamaran', t: 'teks', h: 'Contoh: 30 September 2026. Boleh dikosongkan.' },
+        { k: 'ringkas', l: 'Ringkasan pekerjaan', t: 'area' },
+        { k: 'syarat', l: 'Persyaratan', t: 'baris', h: 'Satu baris satu syarat.' },
+        { k: 'berkas', l: 'Berkas yang dibawa', t: 'baris', h: 'Satu baris satu berkas.' }
       ]
     },
     config: {
@@ -325,6 +361,10 @@
     if (t === 'jam') return (v || []).map(function (x) { return [x.sesi, x.jam, x.isi, x.ket, x.buka === false ? 'tutup' : 'buka'].join(' :: '); }).join('\n');
     if (t === 'poli') return (v || []).map(function (x) { return x.slug + ' :: ' + x.nama + ' :: ' + x.kode; }).join('\n');
     if (t === 'banner') return (v || []).map(function (x) { return [x.judul, x.teks, x.cta, x.href].join(' :: '); }).join('\n');
+    if (t === 'formulir') return (v || []).map(function (x) {
+      return [x.label, x.tipe || 'teks', x.wajib ? 'wajib' : '', (x.opsi || []).join('|')]
+        .join(' :: ').replace(/(\s*::\s*)+$/, '');
+    }).join('\n');
     return v == null ? '' : v;
   }
 
@@ -338,6 +378,15 @@
     if (t === 'jam') return baris.map(function (b) { var p = pecah(b, 5); return { sesi: p[0], jam: p[1], isi: p[2], ket: p[3], buka: String(p[4]).toLowerCase() !== 'tutup' }; });
     if (t === 'poli') return baris.map(function (b) { var p = pecah(b, 3); return { slug: p[0], nama: p[1], kode: p[2] }; });
     if (t === 'banner') return baris.map(function (b) { var p = pecah(b, 4); return { judul: p[0], teks: p[1], cta: p[2], href: p[3] }; });
+    if (t === 'formulir') return baris.map(function (b) {
+      var p = pecah(b, 4);
+      var tipe = (p[1] || 'teks').toLowerCase();
+      if (['teks','area','angka','tanggal','pilih','centang'].indexOf(tipe) < 0) tipe = 'teks';
+      var f = { label: p[0], tipe: tipe };
+      if (/wajib/i.test(p[2])) f.wajib = true;
+      if (tipe === 'pilih') f.opsi = String(p[3] || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
+      return f;
+    }).filter(function (f) { return f.label; });
     if (t === 'angka') return Number(s) || 0;
     return s;
   }
@@ -394,9 +443,9 @@
       else if (f.t === 'angka') inti = '<input type="number" id="' + kb + '" value="' + esc(v) + '">';
       else if (f.t === 'tanggal') inti = '<input type="date" id="' + kb + '" value="' + esc(v) + '">';
       else if (f.t === 'teks') inti = '<input id="' + kb + '" value="' + esc(v) + '">';
-      else inti = '<textarea id="' + kb + '" rows="' + (/baris|pasangan|jadwal|jam|poli|banner/.test(f.t) ? 6 : 3) + '">' + esc(v) + '</textarea>';
+      else inti = '<textarea id="' + kb + '" rows="' + (/baris|pasangan|jadwal|jam|poli|banner|formulir/.test(f.t) ? 6 : 3) + '">' + esc(v) + '</textarea>';
 
-      var lebar = /area|baris|pasangan|jadwal|jam|poli|banner/.test(f.t) ? ' full' : '';
+      var lebar = /area|baris|pasangan|jadwal|jam|poli|banner|formulir/.test(f.t) ? ' full' : '';
       return '<div class="kt-f' + lebar + '"><label for="' + kb + '">' + esc(f.l) + (f.wajib ? ' <span class="req">*</span>' : '') + '</label>' +
         inti + (f.h ? '<span class="kt-h">' + f.h + '</span>' : '') + '</div>';
     }).join('');

@@ -8,7 +8,7 @@
   var CFG = window.KLINIK || {};
   var TKEY = 'klinik-admin-token';
   var DEMO = !CFG.gasUrl || CFG.gasUrl.indexOf('GANTI_DENGAN') > -1;
-  var state = { token: null, user: '', daftar: [], pesan: [] };
+  var state = { token: null, user: '', akun: '', peran: 'super', akses: [], daftar: [], pesan: [] };
 
   var $ = function (s) { return document.querySelector(s); };
   var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -47,15 +47,60 @@
             daftar: [
               { id: 'R-001', ts: hari + 'T06:12:00', nama: 'Contoh Pasien A', umur: '34 tahun', alamat: 'Karangtengah, Sananwetan', keluhan: 'Gigi geraham berlubang dan nyeri.', hp: '628123456789', layanan: 'Poli Gigi', tanggal: hari, sesi: 'Sore/Malam (17.00–20.30)', status: 'Baru' },
               { id: 'R-002', ts: hari + 'T07:40:00', nama: 'Contoh Pasien B', umur: '58 tahun', alamat: 'Kepanjenkidul, Kota Blitar', keluhan: 'Kontrol tekanan darah rutin.', hp: '628987654321', layanan: 'Poli Umum', tanggal: hari, sesi: 'Pagi (06.00–11.30)', status: 'Konfirmasi' },
-              { id: 'R-003', ts: kemarin + 'T18:05:00', nama: 'Contoh Pasien C', umur: '8 tahun', alamat: 'Nglegok, Kab. Blitar', keluhan: 'Rencana khitan.', hp: '628555111222', layanan: 'Pelayanan Khitan', tanggal: kemarin, sesi: 'Fleksibel — atur oleh admin', status: 'Selesai' }
+              { id: 'R-003', ts: kemarin + 'T18:05:00', nama: 'Contoh Pasien C', umur: '8 tahun', alamat: 'Nglegok, Kab. Blitar', keluhan: 'Rencana khitan.', hp: '628555111222', layanan: 'Pelayanan Khitan', tanggal: kemarin, sesi: 'Fleksibel — atur oleh admin', status: 'Selesai',
+                tambahan: '{"Usia anak":"8 tahun","Metode yang diinginkan":"Klem"}' }
             ],
-            pesan: [{ id: 'P-001', ts: hari + 'T09:00:00', nama: 'Contoh Pengirim', hp: '628111222333', subjek: 'Pertanyaan layanan', pesan: 'Apakah hari Minggu buka?' }]
+            pesan: [{ id: 'P-001', ts: hari + 'T09:00:00', nama: 'Contoh Pengirim', hp: '628111222333', subjek: 'Pertanyaan layanan', pesan: 'Apakah hari Minggu buka?' }],
+            peran: 'super', akses: AKSES_DEMO_SEMUA.slice(), user: 'admin (demo)', akun: 'admin'
           });
+        }
+        if (action === 'adminDaftar') return res({ ok: true, akses: AKSES_DEMO_SEMUA.slice(), daftar: DEMO_AKUN.slice() });
+        if (action === 'adminSimpan') return demoAkunSimpan(p, res, rej);
+        if (action === 'adminHapus') return demoAkunHapus(p, res, rej);
+        if (action === 'gantiSandi') {
+          if (!p.baru || p.baru.length < 8) return rej(new Error('Kata sandi baru minimal 8 karakter.'));
+          if (p.lama !== 'demo') return rej(new Error('Kata sandi lama salah.'));
+          return res({ ok: true });
         }
         if (action === 'updateStatus') return res(demoUbahStatus(p || {}));
         res({ ok: true });
       }, 320);
     });
+  }
+
+  /* ---------------------------- akun contoh untuk mode demo ---- */
+  var AKSES_DEMO_SEMUA = ['antrean', 'daftar', 'konten', 'pesan', 'rekap'];
+  var DEMO_AKUN = [
+    { user: 'admin', nama: 'Pemilik Klinik', peran: 'super', akses: AKSES_DEMO_SEMUA.slice(), aktif: true, dibuat: '2026-01-02' },
+    { user: 'loket', nama: 'Petugas Loket', peran: 'admin', akses: ['antrean', 'daftar'], aktif: true, dibuat: '2026-03-14' }
+  ];
+
+  function demoAkunSimpan(p, res, rej) {
+    var user = String(p.user || '').toLowerCase();
+    if (!/^[a-z0-9._-]{3,30}$/.test(user)) return rej(new Error('Nama pengguna hanya boleh huruf kecil, angka, titik, garis bawah, dan tanda hubung (3–30 karakter).'));
+    var peran = p.peran === 'super' ? 'super' : 'admin';
+    var akses = peran === 'super' ? AKSES_DEMO_SEMUA.slice() : (p.akses || []);
+    if (peran !== 'super' && !akses.length) return rej(new Error('Pilih minimal satu bagian yang boleh diakses.'));
+    var lama = DEMO_AKUN.filter(function (x) { return x.user === user; })[0];
+    if (!lama && !p.sandi) return rej(new Error('Kata sandi wajib diisi saat membuat akun baru.'));
+    if (p.sandi && p.sandi.length < 8) return rej(new Error('Kata sandi minimal 8 karakter.'));
+    if (lama && lama.peran === 'super' && (peran !== 'super' || p.aktif === false)) {
+      var lain = DEMO_AKUN.filter(function (x) { return x.peran === 'super' && x.aktif && x.user !== user; }).length;
+      if (!lain) return rej(new Error('Ini satu-satunya super admin yang aktif. Angkat super admin lain lebih dulu.'));
+    }
+    var isi = { user: user, nama: p.nama || user, peran: peran, akses: akses,
+                aktif: p.aktif !== false, dibuat: lama ? lama.dibuat : '2026-09-18' };
+    if (lama) DEMO_AKUN[DEMO_AKUN.indexOf(lama)] = isi; else DEMO_AKUN.push(isi);
+    return res({ ok: true, user: user, baru: !lama });
+  }
+
+  function demoAkunHapus(p, res, rej) {
+    var user = String(p.user || '').toLowerCase();
+    if (user === 'admin') return rej(new Error('Anda tidak bisa menghapus akun Anda sendiri.'));
+    var a = DEMO_AKUN.filter(function (x) { return x.user === user; })[0];
+    if (!a) return rej(new Error('Akun tidak ditemukan: ' + user));
+    DEMO_AKUN.splice(DEMO_AKUN.indexOf(a), 1);
+    return res({ ok: true, user: user });
   }
 
   /** Tiruan alur "Konfirmasi → masuk antrean" agar mode demo berperilaku
@@ -147,6 +192,7 @@
     $('#login').hidden = true;
     $('#app').hidden = false;
     isiJenisKartu();
+    gambarSapaan();
     $('#who').textContent = state.user;
     $('#demo-note').hidden = !DEMO;
     load();
@@ -159,21 +205,81 @@
   });
   $('#refresh').addEventListener('click', load);
 
-  /* -------------------------------------------------- TABS */
-  function bukaTab(nama) {
-    $$('.tabs button').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === nama); });
-    $$('.tabpane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === nama); });
+  /* ------------------------------------ MENU & BAGIAN PANEL */
+  var JUDUL = {
+    antrean: ['Antrean Hari Ini', 'Papan antrean pasien hari ini'],
+    daftar:  ['Pendaftaran', 'Pendaftar online yang masuk ke sistem'],
+    konten:  ['Konten Situs', 'Isi halaman publik — terbit setelah ditekan Terbitkan'],
+    pesan:   ['Pesan Masuk', 'Kiriman dari formulir kontak'],
+    rekap:   ['Rekap & Ekspor', 'Ringkasan dan unduhan data'],
+    pengguna: ['Pengguna Panel', 'Akun petugas dan hak aksesnya']
+  };
+
+  function tutupMenu() {
+    var sb = $('#asb'), tirai = $('#asb-tirai');
+    if (sb) sb.classList.remove('buka');
+    if (tirai) tirai.hidden = true;
   }
 
-  $$('.tabs button').forEach(function (b) {
+  function bukaTab(nama) {
+    $$('[data-tab]').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === nama); });
+    $$('.tabpane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === nama); });
+    var j = JUDUL[nama];
+    if (j) {
+      var t = $('#atop-judul'), sub = $('#atop-sub');
+      if (t) t.textContent = j[0];
+      if (sub) sub.textContent = j[1];
+    }
+    tutupMenu();                      // di layar kecil menu menutup sendiri
+    var isi = $('.amain');
+    if (isi && isi.scrollTo) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  $$('[data-tab]').forEach(function (b) {
     b.addEventListener('click', function () { bukaTab(b.dataset.tab); });
   });
+
+  var burger = $('#aburger');
+  if (burger) burger.addEventListener('click', function () {
+    var sb = $('#asb'), tirai = $('#asb-tirai');
+    var buka = !sb.classList.contains('buka');
+    sb.classList.toggle('buka', buka);
+    if (tirai) tirai.hidden = !buka;
+  });
+  ['#asb-tutup', '#asb-tirai'].forEach(function (sel) {
+    var el = $(sel); if (el) el.addEventListener('click', tutupMenu);
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') tutupMenu(); });
+
+  /* -------------------------------------- SAPAAN & TANGGAL */
+  function waktuWIB(opsi) {
+    try { return new Intl.DateTimeFormat('id-ID', Object.assign({ timeZone: 'Asia/Jakarta' }, opsi)).format(new Date()); }
+    catch (e) { return new Intl.DateTimeFormat('id-ID', opsi).format(new Date()); }
+  }
+
+  function salam() {
+    var jam = Number(waktuWIB({ hour: '2-digit', hour12: false }));
+    return jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
+  }
+
+  function gambarSapaan() {
+    var el = $('#salam');
+    if (el) el.textContent = salam() + ', ' + (state.user || 'admin');
+    var tgl = $('#ahead-tgl span');
+    if (tgl) tgl.textContent = waktuWIB({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
 
   /* -------------------------------------------------- LOAD */
   function load() {
     api('list').then(function (r) {
       state.daftar = r.daftar || []; state.pesan = r.pesan || [];
+      if (r.peran) state.peran = r.peran;
+      if (r.akses) state.akses = r.akses;
+      if (r.user) { state.user = r.user; $('#who').textContent = r.user; }
+      if (r.akun) state.akun = r.akun;
+      terapkanAkses();
       fillFilters(); renderAll();
+      return pgMuat();
     }).catch(function (err) {
       alert('Gagal memuat data: ' + err.message);
     });
@@ -203,9 +309,29 @@
     // set() aman terhadap kartu KPI yang dihapus dari HTML —
     // satu id hilang tidak boleh menghentikan seluruh render.
     var set = function (id, nilai) { var el = $(id); if (el) el.textContent = nilai; };
-    set('#k-hari', state.daftar.filter(function (d) { return (d.tanggal || '').slice(0, 10) === today; }).length);
-    set('#k-baru', state.daftar.filter(function (d) { return d.status === 'Baru'; }).length);
+    var hariIni = state.daftar.filter(function (d) { return (d.tanggal || '').slice(0, 10) === today; }).length;
+    var baru = state.daftar.filter(function (d) { return d.status === 'Baru'; }).length;
+    set('#k-hari', hariIni);
+    set('#k-baru', baru);
     set('#k-pesan', state.pesan.length);
+
+    /* Lencana angka di menu kiri — kosong bila nol, supaya tidak jadi hiasan. */
+    lencana('#n-daftar', baru);
+    lencana('#n-pesan', state.pesan.length);
+
+    var sub = $('#salam-sub');
+    if (sub) {
+      sub.textContent = baru
+        ? 'Ada ' + baru + ' pendaftaran yang belum dikonfirmasi.'
+        : (hariIni ? 'Semua pendaftaran hari ini sudah dikonfirmasi.' : 'Belum ada pendaftaran masuk hari ini.');
+    }
+    gambarSapaan();
+  }
+
+  function lencana(sel, n) {
+    var el = $(sel); if (!el) return;
+    el.textContent = n > 99 ? '99+' : (n || '');
+    el.dataset.nol = n ? '0' : '1';
   }
 
   function filtered() {
@@ -250,23 +376,39 @@
     b.title = buka ? 'Klik untuk menampilkan nomor penuh' : 'Klik untuk menyembunyikan';
   });
 
+  /* Jawaban pertanyaan tambahan per layanan disimpan sebagai JSON satu
+     sel. Ditampilkan di bawah keluhan supaya petugas melihatnya tanpa
+     membuka spreadsheet. */
+  function tambahanSel(d) {
+    var isi = d.tambahan;
+    if (!isi) return '';
+    if (typeof isi === 'string') { try { isi = JSON.parse(isi); } catch (e) { return ''; } }
+    var kunci = Object.keys(isi || {});
+    if (!kunci.length) return '';
+    return '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;line-height:1.55">' +
+      kunci.map(function (k) {
+        return '<span style="color:var(--muted)">' + esc(k) + ':</span> <b style="color:var(--ink-2);font-weight:600">' + esc(isi[k]) + '</b>';
+      }).join('<br>') + '</div>';
+  }
+
   function renderDaftar() {
     var rows = filtered();
     $('#empty-daftar').hidden = rows.length > 0;
     $('#tb-daftar').innerHTML = rows.map(function (d) {
       var wa = 'https://wa.me/' + String(d.hp || '').replace(/\D/g, '') +
         '?text=' + encodeURIComponent('Halo ' + d.nama + ', pendaftaran Anda di Klinik Pratama Sehat Sejahtera untuk layanan ' + d.layanan + ' pada ' + d.tanggal + ' telah kami terima. Nomor antrean Anda: ');
+      /* data-l dipakai CSS untuk mengubah tabel jadi kartu di layar kecil */
       return '<tr>' +
-        '<td>' + jam(d.ts) + '</td>' +
-        '<td><b style="color:var(--ink)">' + esc(d.nama) + '</b><br><span style="color:var(--muted);font-size:12px">' + esc(d.umur || '') + ' · ' + esc(d.id || '') + '</span></td>' +
-        '<td style="max-width:190px">' + esc(d.alamat || '-') + '</td>' +
-        '<td><a href="' + wa + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">' + esc(d.hp) + '</a></td>' +
-        '<td style="white-space:nowrap">' + kartuSel(d) + '</td>' +
-        '<td>' + esc(d.layanan) + '</td>' +
-        '<td>' + esc(d.tanggal) + '<br><span style="color:var(--muted);font-size:12px">' + esc(d.sesi || '') + '</span></td>' +
-        '<td style="max-width:240px">' + esc(d.keluhan) + '</td>' +
-        '<td><span class="pill p-' + esc((d.status || 'baru').toLowerCase()) + '">' + esc(d.status || 'Baru') + '</span></td>' +
-        '<td><div class="act">' +
+        '<td data-l="Waktu">' + jam(d.ts) + '</td>' +
+        '<td data-l="Pasien"><b style="color:var(--ink)">' + esc(d.nama) + '</b><br><span style="color:var(--muted);font-size:12px">' + esc(d.umur || '') + ' · ' + esc(d.id || '') + '</span></td>' +
+        '<td data-l="Alamat" style="max-width:190px">' + esc(d.alamat || '-') + '</td>' +
+        '<td data-l="Kontak"><a href="' + wa + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">' + esc(d.hp) + '</a></td>' +
+        '<td data-l="Kartu" style="white-space:nowrap">' + kartuSel(d) + '</td>' +
+        '<td data-l="Layanan">' + esc(d.layanan) + '</td>' +
+        '<td data-l="Jadwal">' + esc(d.tanggal) + '<br><span style="color:var(--muted);font-size:12px">' + esc(d.sesi || '') + '</span></td>' +
+        '<td data-l="Keluhan" style="max-width:240px">' + esc(d.keluhan) + tambahanSel(d) + '</td>' +
+        '<td data-l="Status"><span class="pill p-' + esc((d.status || 'baru').toLowerCase()) + '">' + esc(d.status || 'Baru') + '</span></td>' +
+        '<td data-l="Aksi"><div class="act">' +
           '<button data-set="Konfirmasi" data-id="' + esc(d.id) + '">Konfirmasi</button>' +
           '<button data-set="Selesai" data-id="' + esc(d.id) + '">Selesai</button>' +
           '<button data-set="Batal" data-id="' + esc(d.id) + '">Batal</button>' +
@@ -389,6 +531,7 @@
   }
 
   function qaMuat() {
+    if (!bolehLihat('antrean')) return Promise.resolve();
     return qaApi('antreanAdmin', {}).then(function (r) {
       QA.tanggal = r.tanggal; QA.bukaOnline = !!r.bukaOnline;
       QA.poli = r.poli || QA.poli; QA.antre = r.antre || [];
@@ -397,6 +540,7 @@
       qaGambar(); izinGambar();
       var nunggu = QA.antre.filter(function (r2) { return r2.status === 'menunggu' || r2.status === 'tunggu'; }).length;
       var kAntre = $('#k-antre'); if (kAntre) kAntre.textContent = nunggu;
+      lencana('#n-antrean', nunggu);
     }).catch(function (e) { qaPesan('bad', 'Gagal memuat antrean: ' + e.message); });
   }
 
@@ -593,14 +737,199 @@
     if (pane && pane.classList.contains('on') && !document.hidden) qaMuat();
   }, 20000);
 
+  /* =================================================== AKUN PANEL ===
+   * Super admin mengelola akun; setiap orang bisa mengganti kata
+   * sandinya sendiri. Bagian yang tidak diberi akses disembunyikan dari
+   * menu — dan datanya memang tidak dikirim server, jadi menyembunyikan
+   * menu bukan satu-satunya pengaman.
+   * ================================================================= */
+  var AKSES_LABEL = { antrean: 'Antrean', daftar: 'Pendaftaran', konten: 'Konten Situs',
+                      pesan: 'Pesan Masuk', rekap: 'Rekap & Ekspor' };
+  var PG = { daftar: [], akses: ['antrean', 'daftar', 'konten', 'pesan', 'rekap'], sunting: null };
+
+  function bolehLihat(bagian) {
+    return state.peran === 'super' || (state.akses || []).indexOf(bagian) > -1;
+  }
+
+  /** Sembunyikan menu yang tidak boleh dibuka akun ini. */
+  function terapkanAkses() {
+    var pertama = '';
+    $$('[data-tab]').forEach(function (b) {
+      var t = b.dataset.tab;
+      var boleh = t === 'pengguna' ? state.peran === 'super' : bolehLihat(t);
+      b.hidden = !boleh;
+      if (boleh && !pertama) pertama = t;
+    });
+    var aktif = $$('[data-tab]').filter(function (b) { return b.classList.contains('on'); })[0];
+    if ((!aktif || aktif.hidden) && pertama) bukaTab(pertama);
+  }
+
+  function pgPesan(tipe, msg) {
+    var b = $('#pg-status'); if (!b) return;
+    b.className = 'fstatus show ' + tipe; b.innerHTML = '<div>' + msg + '</div>';
+    clearTimeout(b._h); b._h = setTimeout(function () { b.className = 'fstatus'; }, 6000);
+  }
+
+  function pgMuat() {
+    if (state.peran !== 'super') return Promise.resolve();
+    return api('adminDaftar').then(function (r) {
+      PG.daftar = r.daftar || [];
+      PG.akses = r.akses || PG.akses;
+      var cat = $('#pg-catatan'), catT = $('#pg-catatan-t');
+      if (cat) {
+        cat.hidden = !r.catatan;
+        cat.className = 'kt-terbit' + (r.catatan ? ' ada' : '');
+        if (catT) catT.textContent = r.catatan || '';
+      }
+      pgGambar();
+    }).catch(function (e) { pgPesan('bad', esc(e.message)); });
+  }
+
+  function pgGambar() {
+    var kotak = $('#pg-list'); if (!kotak) return;
+    if (!PG.daftar.length) {
+      kotak.innerHTML = '<div class="kt-kosong">Belum ada akun tersimpan.<br>Buat akun super admin lebih dulu — sesudah itu akun bawaan berhenti dipakai.</div>';
+      return;
+    }
+    kotak.innerHTML = PG.daftar.map(function (a) {
+      var akses = a.peran === 'super'
+        ? '<span class="pg-chip">semua bagian</span>'
+        : (a.akses || []).map(function (k) { return '<span class="pg-chip">' + esc(AKSES_LABEL[k] || k) + '</span>'; }).join('');
+      return '<div class="kt-r' + (a.aktif ? '' : ' mati') + '">' +
+        '<div class="kt-n"><b>' + esc(a.nama || a.user) + ' <span class="pg-peran ' + esc(a.peran) + '">' +
+          (a.peran === 'super' ? 'Super admin' : 'Admin') + '</span></b>' +
+          '<span>' + esc(a.user) + (a.aktif ? '' : ' · dinonaktifkan') + '</span>' +
+          '<div style="margin-top:6px">' + akses + '</div></div>' +
+        '<div class="kt-a">' +
+          '<button data-pg-edit="' + esc(a.user) + '">Edit</button>' +
+          '<button class="bahaya" data-pg-hapus="' + esc(a.user) + '">Hapus</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function pgBuka(user) {
+    var a = PG.daftar.filter(function (x) { return x.user === user; })[0] || null;
+    PG.sunting = a ? a.user : '';
+    $('#pg-modal-j').textContent = a ? 'Edit akun' : 'Tambah akun';
+    $('#pg-user').value = a ? a.user : '';
+    $('#pg-user').readOnly = !!a;
+    $('#pg-nama').value = a ? (a.nama || '') : '';
+    $('#pg-peran').value = a ? a.peran : 'admin';
+    $('#pg-sandi').value = '';
+    $('#pg-sandi-h').textContent = a
+      ? 'Kosongkan bila kata sandinya tidak diubah. Mengisi di sini akan menggantinya.'
+      : 'Wajib diisi untuk akun baru. Minimal 8 karakter.';
+    $('#pg-aktif').checked = a ? a.aktif !== false : true;
+    $('#pg-akses').innerHTML = PG.akses.map(function (k) {
+      var ada = a ? (a.akses || []).indexOf(k) > -1 : (k === 'antrean' || k === 'daftar');
+      return '<label><input type="checkbox" value="' + esc(k) + '"' + (ada ? ' checked' : '') + '> ' +
+        esc(AKSES_LABEL[k] || k) + '</label>';
+    }).join('');
+    pgSyncPeran();
+    $('#pg-modal-s').className = 'fstatus';
+    $('#pg-modal').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function pgTutup() { $('#pg-modal').hidden = true; document.body.style.overflow = ''; PG.sunting = null; }
+
+  /* Super admin selalu punya semua akses — centangnya dimatikan supaya
+     tidak terlihat seolah bisa dibatasi. */
+  function pgSyncPeran() {
+    var super_ = $('#pg-peran').value === 'super';
+    var blok = $('#pg-akses-blok');
+    if (blok) blok.style.opacity = super_ ? '.45' : '1';
+    $$('#pg-akses input').forEach(function (c) {
+      c.disabled = super_;
+      if (super_) c.checked = true;
+    });
+  }
+
+  function pgSimpan() {
+    var box = $('#pg-modal-s');
+    var akses = $$('#pg-akses input:checked').map(function (c) { return c.value; });
+    var btn = $('#pg-modal-simpan'); btn.disabled = true;
+    box.className = 'fstatus show'; box.innerHTML = '<div>Menyimpan…</div>';
+    api('adminSimpan', {
+      user: ($('#pg-user').value || '').trim().toLowerCase(),
+      nama: ($('#pg-nama').value || '').trim(),
+      peran: $('#pg-peran').value,
+      akses: akses,
+      sandi: $('#pg-sandi').value,
+      aktif: $('#pg-aktif').checked
+    }).then(function (r) {
+      pgTutup();
+      pgPesan('ok', r.baru ? 'Akun <strong>' + esc(r.user) + '</strong> dibuat.' : 'Akun <strong>' + esc(r.user) + '</strong> diperbarui.');
+      return pgMuat();
+    }).catch(function (e) {
+      box.className = 'fstatus show bad'; box.innerHTML = '<div>' + esc(e.message) + '</div>';
+    }).then(function () { btn.disabled = false; });
+  }
+
+  document.addEventListener('click', function (e) {
+    var ed = e.target.closest('[data-pg-edit]');
+    if (ed) return pgBuka(ed.dataset.pgEdit);
+
+    var hp = e.target.closest('[data-pg-hapus]');
+    if (hp) {
+      var u = hp.dataset.pgHapus;
+      if (!confirm('Hapus akun "' + u + '"?\n\nOrang ini tidak akan bisa masuk lagi. Tindakan ini tidak bisa dibatalkan.')) return;
+      hp.disabled = true;
+      return api('adminHapus', { user: u }).then(function () {
+        pgPesan('ok', 'Akun <strong>' + esc(u) + '</strong> dihapus.');
+        return pgMuat();
+      }).catch(function (err) { pgPesan('bad', esc(err.message)); hp.disabled = false; });
+    }
+  });
+
+  ['#pg-tambah'].forEach(function (sel) {
+    var el = $(sel); if (el) el.addEventListener('click', function () { pgBuka(''); });
+  });
+  ['#pg-modal-x', '#pg-modal-batal'].forEach(function (sel) {
+    var el = $(sel); if (el) el.addEventListener('click', pgTutup);
+  });
+  var pgP = $('#pg-peran'); if (pgP) pgP.addEventListener('change', pgSyncPeran);
+  var pgS = $('#pg-modal-simpan'); if (pgS) pgS.addEventListener('click', pgSimpan);
+
+  /* --------------------------------------- ganti kata sandi sendiri */
+  function sdTutup() { $('#sd-modal').hidden = true; document.body.style.overflow = ''; }
+  var sdBtn = $('#btn-sandi');
+  if (sdBtn) sdBtn.addEventListener('click', function () {
+    ['#sd-lama', '#sd-baru', '#sd-ulang'].forEach(function (s2) { var el = $(s2); if (el) el.value = ''; });
+    $('#sd-status').className = 'fstatus';
+    $('#sd-modal').hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('#sd-lama').focus();
+  });
+  ['#sd-x', '#sd-batal'].forEach(function (sel) {
+    var el = $(sel); if (el) el.addEventListener('click', sdTutup);
+  });
+  var sdS = $('#sd-simpan');
+  if (sdS) sdS.addEventListener('click', function () {
+    var box = $('#sd-status');
+    var lama = $('#sd-lama').value, baru = $('#sd-baru').value, ulang = $('#sd-ulang').value;
+    var salah = !lama ? 'Isi kata sandi sekarang.'
+      : baru.length < 8 ? 'Kata sandi baru minimal 8 karakter.'
+      : baru !== ulang ? 'Ulangan kata sandi belum sama.' : '';
+    if (salah) { box.className = 'fstatus show bad'; box.innerHTML = '<div>' + salah + '</div>'; return; }
+    sdS.disabled = true;
+    box.className = 'fstatus show'; box.innerHTML = '<div>Menyimpan…</div>';
+    api('gantiSandi', { lama: lama, baru: baru }).then(function () {
+      sdTutup();
+      alert('Kata sandi berhasil diganti. Pakai yang baru saat masuk berikutnya.');
+    }).catch(function (e) {
+      box.className = 'fstatus show bad'; box.innerHTML = '<div>' + esc(e.message) + '</div>';
+    }).then(function () { sdS.disabled = false; });
+  });
+
   function renderPesan() {
     $('#empty-pesan').hidden = state.pesan.length > 0;
     $('#tb-pesan').innerHTML = state.pesan.map(function (p) {
       var wa = 'https://wa.me/' + String(p.hp || '').replace(/\D/g, '');
-      return '<tr><td>' + jam(p.ts) + '</td><td><b style="color:var(--ink)">' + esc(p.nama) + '</b></td>' +
-        '<td><a href="' + wa + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">' + esc(p.hp) + '</a></td>' +
-        '<td>' + esc(p.subjek) + '</td><td style="max-width:360px">' + esc(p.pesan) + '</td>' +
-        '<td><div class="act"><a class="btn btn-ghost" style="padding:6px 12px;font-size:12px;min-height:0" href="' + wa + '" target="_blank" rel="noopener">Balas</a></div></td></tr>';
+      return '<tr><td data-l="Waktu">' + jam(p.ts) + '</td><td data-l="Nama"><b style="color:var(--ink)">' + esc(p.nama) + '</b></td>' +
+        '<td data-l="Kontak"><a href="' + wa + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">' + esc(p.hp) + '</a></td>' +
+        '<td data-l="Perihal">' + esc(p.subjek) + '</td><td data-l="Pesan" style="max-width:360px">' + esc(p.pesan) + '</td>' +
+        '<td data-l="Aksi"><div class="act"><a class="btn btn-ghost" style="padding:6px 12px;font-size:12px;min-height:0" href="' + wa + '" target="_blank" rel="noopener">Balas</a></div></td></tr>';
     }).join('');
   }
 
@@ -628,7 +957,7 @@
 
   /* ------------------------------------------------ EKSPOR */
   $('#export-csv').addEventListener('click', function () {
-    var cols = ['id', 'ts', 'nama', 'umur', 'alamat', 'keluhan', 'hp', 'layanan', 'tanggal', 'sesi', 'status'];
+    var cols = ['id', 'ts', 'nama', 'umur', 'alamat', 'keluhan', 'hp', 'layanan', 'tanggal', 'sesi', 'status', 'tambahan'];
     var csv = [cols.join(',')].concat(state.daftar.map(function (d) {
       return cols.map(function (c) { return '"' + String(d[c] == null ? '' : d[c]).replace(/"/g, '""') + '"'; }).join(',');
     })).join('\r\n');

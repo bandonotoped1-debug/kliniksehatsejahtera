@@ -122,8 +122,12 @@ ul{list-style:none;padding:0}
 .tb-sep{width:1px;height:16px;background:rgba(255,255,255,.18)}
 .tb-wa{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:#fff;font-weight:600;white-space:nowrap;flex:none}
 .tb-wa:hover{color:var(--g-300)}
-@media (max-width:980px){.tb-addr,.tb-sep{display:none}}
-@media (max-width:620px){.tb-hours{display:none}.topbar-in{justify-content:center}.tb-wa{margin-left:0}}
+/* Penting: `.topbar span` lebih kuat dari `.tb-addr`, jadi aturan
+   penyembunyi HARUS ikut disaring `.topbar` — kalau tidak, alamat dan
+   jam tetap dirender di layar kecil lalu terpotong `overflow:hidden`,
+   dan pengunjung HP melihat teks terpenggal di bar paling atas. */
+@media (max-width:980px){.topbar .tb-addr,.topbar .tb-sep{display:none}}
+@media (max-width:620px){.topbar .tb-hours{display:none}.topbar-in{justify-content:center}.tb-wa{margin-left:0}}
 
 /* ----------------------------------------------------- HEADER */
 .hd{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.88);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line-2);transition:box-shadow .25s,border-color .25s}
@@ -210,6 +214,42 @@ body.lock{overflow:hidden}
 .hcard-hd .live[data-status="tutup"]{color:var(--muted);background:var(--line-2)}
 .hcard-hd .live[data-status="tutup"] .dot{background:var(--muted);animation:none}
 .q-jam{padding:9px 18px;font-size:12.5px;font-weight:600;color:var(--g-700);background:var(--g-50);border-bottom:1px solid var(--line-2)}
+/* ---- Kartu lowongan kerja ---- */
+.pill-lk{font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap}
+.pill-lk.buka{background:var(--g-50);color:var(--g-700)}
+.pill-lk.tutup{background:var(--line-2);color:var(--muted)}
+.lk-meta{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted)}
+.lk-meta span{display:inline-flex;align-items:center;gap:7px}
+.lk-meta svg{width:15px;height:15px;flex:none}
+.lk-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:7px}
+.lk-list li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--body);line-height:1.55}
+.lk-list svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--g-600)}
+/* ---- Tayangan testimoni berjalan (assets/js/testimoni.js) ---- */
+.ts{position:relative}
+.ts-rel{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;
+  scrollbar-width:none;padding:4px 2px 8px}
+.ts-rel::-webkit-scrollbar{display:none}
+.ts-i{flex:0 0 clamp(260px,32%,380px);scroll-snap-align:start;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:var(--sh-1)}
+.ts-img{aspect-ratio:4/3;background:var(--g-50)}
+.ts-img img{width:100%;height:100%;object-fit:cover}
+.ts-b{padding:20px 22px;display:flex;flex-direction:column;gap:10px;flex:1}
+.ts-q{width:26px;height:26px;color:var(--g-300);flex:none}
+.ts-b p{font-size:14.5px;line-height:1.65;color:var(--body);flex:1}
+.ts-m b{display:block;font-family:var(--ff-h);font-size:14.5px;color:var(--ink)}
+.ts-m span{display:block;font-size:12.5px;color:var(--muted)}
+.ts-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px}
+.ts-ar{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);
+  display:grid;place-items:center;cursor:pointer;color:var(--ink-2);flex:none}
+.ts-ar:hover{border-color:var(--g-400);color:var(--brand)}
+.ts-ar[data-ts="prev"] svg{transform:rotate(180deg)}
+.ts-ar svg{width:18px;height:18px}
+.ts-dots{display:flex;gap:8px}
+.ts-dot{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:var(--line);cursor:pointer;
+  transition:width .2s var(--ease),background .2s}
+.ts-dot.on{width:22px;border-radius:99px;background:var(--g-500)}
+@media (max-width:620px){.ts-i{flex-basis:84%}.ts-rel{gap:14px}}
 .q-card[data-status="tutup"] .q-jam{color:var(--muted);background:var(--surface-2)}
 .q-card[data-status="izin"] .q-jam{color:#A66A00;background:#FFF7E6}
 .hcard-ft{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line-2)}

@@ -12,9 +12,9 @@
 
 const CONFIG = {
   // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
+  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.netlify.app/').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
-  shortName: 'Klinik SSS',
+  shortName: 'KSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
   // Nomor WhatsApp admin pendaftaran (format internasional tanpa +)
   waNumber: '6289653502700',
@@ -27,7 +27,7 @@ const CONFIG = {
     'Terapi Bekam':           { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' },
     'Vaksinasi Umrah & Haji': { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' }
   },
-  email: 'halo@kliniksehatsejahtera.id',
+  email: 'kliniksejahtera058@gmail.com',
   address: {
     street: 'Perum Puri Kenari Asri Blok E4, Karangtengah',
     district: 'Kec. Sananwetan',
@@ -120,14 +120,21 @@ const CONFIG = {
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
   // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbyN1IPoVCCQ5q8DHVLWjaq6AYN1C5L0gFQNEb7KTIFAH-woGrsgVC4uTxG-B0gd9Rmz/exec',
+  gasUrl: 'https://script.google.com/macros/s/AKfycbwnK17H2xJqPQVXBaCzu4MvZf0FvulX97XpH3PEGiFlSg_nnUl6SWUJFdy1VDAwMr8U/exec',
+  /* Perkiraan biaya disembunyikan dari seluruh halaman publik atas
+     permintaan pemilik. Ubah ke true bila kelak ingin ditampilkan lagi;
+     data harganya sengaja tetap disimpan di tiap layanan. */
+  tampilkanBiaya: false,
   gaId: '' // opsional: 'G-XXXXXXX'
 };
 
 /* ---------------------------------------------------------- NAV */
 const NAV = [
   { label: 'Beranda',     href: '/' },
-  { label: 'Profil',      href: '/profil.html' },
+  { label: 'Profil',      href: '/profil.html', children: [
+      { label: 'Profil Klinik',  href: '/profil.html' },
+      { label: 'Lowongan Kerja', href: '/lowongan.html' }
+  ]},
   { label: 'Layanan',     href: '/layanan.html', children: [
       { label: 'Poli Umum',           href: '/layanan/poli-umum.html' },
       { label: 'Poli Gigi',           href: '/layanan/poli-gigi.html' },
@@ -137,12 +144,23 @@ const NAV = [
   ]},
   { label: 'Antrean',     href: '/antrean.html' },
   { label: 'Dokter',      href: '/dokter.html' },
-  { label: 'Apotek',      href: '/apotek.html' },
+  { label: 'Apotek',      href: '/apotek.html', children: [
+      { label: 'Cabang Apotek',          href: '/apotek.html' },
+      { label: 'Produk Unggulan Apotek', href: '/produk-apotek.html' }
+  ]},
   { label: 'Artikel',     href: '/artikel.html' },
   { label: 'Kontak',      href: '/kontak.html' }
 ];
 
-/* ------------------------------------------------------ LAYANAN */
+/* ------------------------------------------------------ LAYANAN
+ * Tiap layanan boleh punya `formulir`: pertanyaan tambahan yang muncul
+ * di halaman pendaftaran begitu layanan itu dipilih. Sengaja DIKOSONGKAN
+ * — pertanyaannya disusun sendiri oleh klinik lewat panel admin, karena
+ * hanya klinik yang tahu apa yang perlu ditanyakan sebelum tindakan.
+ *
+ *   { label, tipe: 'teks'|'area'|'angka'|'tanggal'|'pilih'|'centang',
+ *     opsi: ['a','b'] (khusus pilih), wajib: true|false, ket: 'petunjuk' }
+ */
 const SERVICES = [
   {
     slug: 'poli-umum',
@@ -456,6 +474,27 @@ const PRODUK = {
 };
 
 
+/* --------------------------------------------- TESTIMONI KHITAN
+ * Tayang berjalan otomatis di halaman layanan khitan.
+ * Sengaja KOSONG — diisi klinik lewat panel admin.
+ *
+ * ATURAN YANG DITEGAKKAN KODE (jangan dilonggarkan tanpa bertanya):
+ *   • Hanya item dengan `izin: true` yang dirender. Centang itu berarti
+ *     orang tua sudah memberi izin foto & kesannya ditayangkan.
+ *   • `nama` boleh inisial atau nama depan saja — jangan nama lengkap
+ *     anak. Halaman ini publik dan terindeks mesin pencari.
+ *   • `gambar` berupa TAUTAN (Drive/Instagram/mana pun). Pakai foto
+ *     suasana — anak berpakaian lengkap, keluarga, atau ruangan.
+ */
+const TESTIMONI_KHITAN = [];
+
+/* ------------------------------------------------------ LOWONGAN
+ * Sengaja KOSONG. Lowongan diisi lewat panel admin (koleksi "lowongan")
+ * agar yang tayang hanya lowongan yang benar-benar dibuka klinik —
+ * jangan diisi contoh, halaman ini dibaca pelamar sungguhan.
+ */
+const LOWONGAN = [];
+
 /* ------------------------------- TEKS HALAMAN (bisa diedit admin) */
 const TEKS = {
   heroJudul: 'Sehat itu dekat.<br>Sedekat <span class="hl">genggaman</span>.',
@@ -660,4 +699,4 @@ const SEO = {
   ]
 };
 
-module.exports = { CONFIG, NAV, TEKS, AMINAH, ANTREAN, SERVICES, PHARMACIES, DOCTORS, APOTEKER, PRODUK, ADVANTAGES, STATS, ARTICLES, PARTNERS, SEO, FACILITIES, SERVICE_IMG, ARTICLE_IMG };
+module.exports = { CONFIG, NAV, TEKS, LOWONGAN, TESTIMONI_KHITAN, AMINAH, ANTREAN, SERVICES, PHARMACIES, DOCTORS, APOTEKER, PRODUK, ADVANTAGES, STATS, ARTICLES, PARTNERS, SEO, FACILITIES, SERVICE_IMG, ARTICLE_IMG };

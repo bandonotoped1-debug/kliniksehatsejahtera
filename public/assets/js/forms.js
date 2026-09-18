@@ -25,6 +25,11 @@
     else if (d.indexOf('8') === 0) d = '62' + d;
     return d;
   }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+    });
+  }
   function markInvalid(field, bad) {
     var f = field.closest('.field');
     if (f) f.classList.toggle('invalid', bad);
@@ -69,6 +74,48 @@
       return j;
     });
   }
+
+  /* --------------------------------- BERSIH-BERSIH HARIAN
+   * Kiriman tertunda hanya berguna pada hari yang sama: pendaftaran
+   * untuk tanggal yang sudah lewat tidak ada gunanya dikirim ulang.
+   * Begitu tanggal berganti, sisanya dibuang supaya penyimpanan di HP
+   * pasien tidak terus menumpuk. Kunci klinik-* lain yang sudah tidak
+   * dipakai versi ini ikut dihapus.
+   * ------------------------------------------------------------- */
+  var HKEY = 'klinik-hari';
+  var KUNCI_DIPAKAI = [QKEY, HKEY, 'pwa-dismiss'];
+
+  function hariWIB() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+    } catch (e) {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function bersihkanHarian() {
+    var hari = hariWIB();
+    try {
+      if (localStorage.getItem(HKEY) !== hari) {
+        var sisa = [];
+        try {
+          sisa = JSON.parse(localStorage.getItem(QKEY) || '[]').filter(function (it) {
+            return it && new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' })
+              .format(new Date(it.at || 0)) === hari;
+          });
+        } catch (e) { sisa = []; }
+        if (sisa.length) localStorage.setItem(QKEY, JSON.stringify(sisa));
+        else localStorage.removeItem(QKEY);
+        localStorage.setItem(HKEY, hari);
+      }
+      /* Sisa kunci dari versi lama — dibuang sekali, tidak pernah tumbuh lagi. */
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('klinik-') === 0 && KUNCI_DIPAKAI.indexOf(k) < 0) localStorage.removeItem(k);
+      }
+    } catch (e) {}
+  }
+  bersihkanHarian();
 
   /* ------------------------------------------- antrean offline */
   function queue(payload) {
@@ -136,8 +183,62 @@
       if (lay) lay.textContent = sel.value;
       if (no) no.textContent = m.display || '';
     }
-    fDaftar.addEventListener('change', syncNote);
+    /* ---------------------------------------------------------------
+     * PERTANYAAN TAMBAHAN PER LAYANAN
+     * Disusun klinik lewat panel admin (kolom "Pertanyaan tambahan" pada
+     * layanan). Muncul hanya untuk layanan yang punya, hilang begitu
+     * pasien memilih layanan lain — beserta jawabannya, supaya jawaban
+     * layanan sebelumnya tidak ikut terkirim.
+     * --------------------------------------------------------------- */
+    var FORM_LAYANAN = CFG.formulirLayanan || {};
+    var blokTambahan = $('#blok-tambahan'), isiTambahan = $('#isi-tambahan');
+
+    var kunciTambahan = function (i) { return 'tb-' + i; };
+
+    function gambarTambahan() {
+      if (!blokTambahan || !isiTambahan) return;
+      var sel = fDaftar.querySelector('[name="layanan"]:checked');
+      var daftar = (sel && FORM_LAYANAN[sel.value]) || [];
+      if (!daftar.length) { blokTambahan.hidden = true; isiTambahan.innerHTML = ''; return; }
+
+      isiTambahan.innerHTML = daftar.map(function (f, i) {
+        var id = kunciTambahan(i);
+        var wajib = f.wajib ? ' <span class="req">*</span>' : '';
+        var isi;
+        if (f.tipe === 'area') isi = '<textarea id="' + id + '"' + (f.wajib ? ' required' : '') + '></textarea>';
+        else if (f.tipe === 'pilih') isi = '<select id="' + id + '"' + (f.wajib ? ' required' : '') + '>' +
+          '<option value="">Pilih salah satu</option>' +
+          (f.opsi || []).map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+        else if (f.tipe === 'centang') isi = '<label class="chip" style="display:block"><input type="checkbox" id="' + id + '"' +
+          (f.wajib ? ' required' : '') + '> <span>' + esc(f.label) + '</span></label>';
+        else isi = '<input id="' + id + '" type="' + (f.tipe === 'tanggal' ? 'date' : f.tipe === 'angka' ? 'number' : 'text') + '"' +
+          (f.wajib ? ' required' : '') + (f.ket ? ' placeholder="' + esc(f.ket) + '"' : '') + '>';
+
+        return '<div class="field full">' +
+          (f.tipe === 'centang' ? '' : '<label for="' + id + '">' + esc(f.label) + wajib + '</label>') +
+          isi +
+          (f.ket && f.tipe !== 'teks' ? '<div class="hint">' + esc(f.ket) + '</div>' : '') +
+          '<div class="err">Bagian ini wajib diisi.</div></div>';
+      }).join('');
+      blokTambahan.hidden = false;
+    }
+
+    /** Jawaban pertanyaan tambahan, dipasangkan dengan labelnya. */
+    function jawabanTambahan() {
+      var sel = fDaftar.querySelector('[name="layanan"]:checked');
+      var daftar = (sel && FORM_LAYANAN[sel.value]) || [];
+      var out = {};
+      daftar.forEach(function (f, i) {
+        var el = $('#' + kunciTambahan(i)); if (!el) return;
+        var v = f.tipe === 'centang' ? (el.checked ? 'Ya' : '') : String(el.value || '').trim();
+        if (v) out[f.label] = v;
+      });
+      return out;
+    }
+
+    fDaftar.addEventListener('change', function () { syncNote(); gambarTambahan(); });
     syncNote();
+    gambarTambahan();
 
     /* Petunjuk & aturan isian mengikuti jenis kartu yang dipilih.
        Nomor rekam medis sengaja dibiarkan bebas bentuk — di klinik
@@ -214,6 +315,11 @@
           return;
         }
       }
+      /* Jawaban pertanyaan tambahan ikut dikirim & masuk ringkasan WA */
+      var tambahan = jawabanTambahan();
+      var adaTambahan = Object.keys(tambahan).length > 0;
+      if (adaTambahan) d.tambahan = tambahan;
+
       var payload = { action: 'pendaftaran', data: d, meta: { ts: new Date().toISOString(), ua: navigator.userAgent.slice(0, 120), src: new URLSearchParams(location.search).get('src') || 'web' } };
 
       var pesan =
@@ -223,6 +329,7 @@
         '*Umur*\t\t: ' + d.umur + '\n' +
         '*Alamat*\t: ' + d.alamat + '\n' +
         (d.noKartu ? '*' + (d.jenisKartu || 'Kartu') + '*\t: \u2022\u2022\u2022\u2022 ' + d.noKartu.slice(-4) + ' _(nomor lengkap ada di sistem)_\n' : '') +
+        (adaTambahan ? Object.keys(tambahan).map(function (k) { return '*' + k + '*\t: ' + tambahan[k] + '\n'; }).join('') : '') +
         '*Keluhan*\t: ' + d.keluhan + '\n' +
         '━━━━━━━━━━━━━━━━━━━━\n' +
         '*Layanan*\t: ' + d.layanan + '\n' +

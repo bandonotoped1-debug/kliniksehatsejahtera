@@ -7,34 +7,107 @@
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0D2B20">
-<link rel="icon" href="/assets/icons/favicon.svg?v=7a92fe39" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/css/style.css?v=7a92fe39">
+<link rel="icon" href="/assets/icons/favicon.svg?v=7276354f" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/style.css?v=7276354f">
 <style>
   /* Wajib paling atas: atribut [hidden] harus mengalahkan display dari class
      (.login{display:grid} & .demo{display:flex} tadinya menimpa aturan bawaan
      browser, sehingga form login tetap tampil setelah berhasil masuk). */
   [hidden]{display:none!important}
   body{background:var(--canvas)}
-  .ahd{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
-  .ahd img{width:34px;height:34px;border-radius:8px;background:#fff;padding:2px}
-  .ahd b{font-family:var(--ff-h);font-size:15px}
-  .ahd small{display:block;opacity:.6;font-size:11.5px}
-  .ahd .sp{margin-left:auto;display:flex;gap:10px;align-items:center}
-  .ahd .who{font-size:12.5px;opacity:.75}
-  .ahd button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
-  .ahd button:hover{background:rgba(255,255,255,.18)}
-  .awrap{max-width:1240px;margin-inline:auto;padding:24px 20px 60px}
+  /* ================= KERANGKA PANEL =================
+     Menu pindah ke sisi kiri (tetap terlihat di layar lebar, jadi
+     lemari geser di layar kecil). Warna & radius mengikuti token
+     style.css supaya panel tidak terasa lain dari situsnya. */
+  .ash{display:flex;min-height:100dvh}
+  .asb{width:250px;flex:none;background:var(--ink);color:#fff;display:flex;flex-direction:column;gap:4px;
+    padding:16px 12px;position:sticky;top:0;height:100dvh;overflow-y:auto}
+  .asb-brand{display:flex;align-items:center;gap:11px;padding:8px 10px 18px}
+  .asb-brand img{width:36px;height:36px;border-radius:9px;background:#fff;padding:2px;flex:none}
+  .asb-brand b{display:block;font-family:var(--ff-h);font-size:14.5px;line-height:1.25}
+  .asb-brand small{display:block;opacity:.6;font-size:11.5px}
+  .asb-x{margin-left:auto;display:none;background:none;border:0;color:#fff;opacity:.75;cursor:pointer;padding:4px;line-height:0}
+  .asb-x svg{width:20px;height:20px}
+  .asb-x:hover{opacity:1}
+  .anav{display:flex;flex-direction:column;gap:3px}
+  .anav button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;
+    color:rgba(255,255,255,.72);padding:11px 12px;border-radius:12px;cursor:pointer;
+    font-family:var(--ff-h);font-weight:600;font-size:14px}
+  .anav button svg{width:19px;height:19px;flex:none;opacity:.85}
+  .anav button span{flex:1;min-width:0}
+  .anav button:hover{background:rgba(255,255,255,.08);color:#fff}
+  .anav button.on{background:var(--g-600);color:#fff;box-shadow:0 6px 18px -8px rgba(107,163,24,.9)}
+  .anav button.on svg{opacity:1}
+  .anav .n{font-style:normal;font-size:11px;font-weight:800;min-width:20px;text-align:center;
+    padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.16)}
+  .anav .n:empty,.anav .n[data-nol="1"]{display:none}
+  .anav button.on .n{background:rgba(0,0,0,.22)}
+  .asb-ft{margin-top:auto;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,.12)}
+  .asb-ft a{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,.7);font-size:12.5px;text-decoration:none}
+  .asb-ft a:hover{color:#fff}
+  .asb-ft svg{width:15px;height:15px}
+  .asb-tirai{position:fixed;inset:0;background:rgba(13,43,32,.45);z-index:45;border:0}
+  .amain{flex:1;min-width:0;display:flex;flex-direction:column}
+  /* Bar atas: judul bagian yang sedang dibuka + tindakan */
+  .atop{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:12px;padding:12px 20px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+  .aburger{display:none;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;
+    padding:8px;cursor:pointer;color:var(--ink);line-height:0}
+  .aburger svg{width:20px;height:20px}
+  .atop-t{flex:1;min-width:0}
+  .atop-t b{display:block;font-family:var(--ff-h);font-size:15.5px;color:var(--ink);line-height:1.3}
+  .atop-t span{display:block;font-size:12px;color:var(--muted)}
+  .atop-act{display:flex;align-items:center;gap:8px;flex:none}
+  .atop-act .who{font-size:12.5px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .atop-act button{display:inline-flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--ink-2);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .atop-act button:hover{border-color:var(--g-400);color:var(--brand)}
+  .atop-act svg{width:16px;height:16px}
+  .awrap{width:100%;max-width:1240px;margin-inline:auto;padding:22px 20px 60px}
+  /* Sapaan & ringkasan hari ini */
+  .ahead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .ahead h1{font-family:var(--ff-h);font-size:clamp(20px,2.6vw,26px);color:var(--ink);letter-spacing:-.01em}
+  .ahead p{font-size:14px;color:var(--body);margin-top:5px}
+  .ahead-tgl{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+  .ahead-tgl svg{width:15px;height:15px;color:var(--brand)}
+  /* -------- Layar sedang & kecil: menu jadi lemari geser -------- */
+  @media(max-width:1000px){
+    .asb{position:fixed;left:0;top:0;z-index:50;transform:translateX(-100%);
+      transition:transform .22s ease;box-shadow:var(--sh-3);
+      padding-top:calc(16px + env(safe-area-inset-top,0px))}
+    .asb.buka{transform:none}
+    .asb-x{display:block}
+    .aburger{display:inline-flex}
+    .atop{padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+    .awrap{padding:18px 16px 56px}
+  }
+  @media(min-width:1001px){ .asb-tirai{display:none!important} }
+  @media(max-width:620px){
+    .atop-act .who{display:none}
+    .atop-act button .hide-sm{display:none}
+    .atop-act button{padding:9px 11px}
+    .ahead{align-items:flex-start}
+    .ahead-tgl{padding:8px 13px;font-size:12.5px}
+  }
+  @media(prefers-reduced-motion:reduce){ .asb{transition:none} }
   .login{min-height:100dvh;display:grid;place-items:center;padding:24px}
   .login .fcard{max-width:420px;width:100%}
   .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-  .kpi .k{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:20px}
-  .kpi b{display:block;font-family:var(--ff-h);font-size:30px;color:var(--ink);letter-spacing:-.02em}
-  .kpi span{font-size:12.5px;color:var(--muted)}
-  .kpi .k.hl{background:linear-gradient(140deg,var(--g-50),var(--surface));border-color:var(--g-200)}
-  @media(max-width:820px){.kpi{grid-template-columns:repeat(2,1fr)}}
-  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px;margin-bottom:20px;overflow-x:auto}
-  .tabs button{flex:1;min-width:120px;background:none;border:0;padding:10px 16px;border-radius:999px;font-family:var(--ff-h);font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap}
-  .tabs button.on{background:var(--ink);color:#fff}
+  .kpi .k{border-radius:var(--r-md);padding:18px 20px;color:#fff;border:0;box-shadow:var(--sh-2);min-width:0}
+  .kpi span{display:block;font-size:12.5px;font-weight:600;opacity:.85}
+  .kpi b{display:block;font-family:var(--ff-h);font-size:clamp(26px,3.4vw,32px);letter-spacing:-.02em;margin:6px 0 2px}
+  .kpi em{font-style:normal;font-size:11.5px;opacity:.75}
+  .kpi .k1{background:linear-gradient(140deg,var(--g-500),var(--g-700))}
+  .kpi .k2{background:linear-gradient(140deg,var(--ink-2),var(--ink))}
+  .kpi .k3{background:linear-gradient(140deg,#D9941F,#A66A00)}
+  .kpi .k4{background:linear-gradient(140deg,var(--b-500),var(--b-700))}
+  @media(max-width:1000px){.kpi{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:480px){.kpi{grid-template-columns:1fr;gap:12px}
+    .kpi .k{display:flex;align-items:baseline;gap:12px;padding:15px 18px}
+    .kpi span{flex:1;font-size:13px}
+    .kpi b{margin:0;font-size:26px}
+    .kpi em{display:none}}
   .bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
   .bar input,.bar select{padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;min-height:42px}
   .bar .grow{flex:1;min-width:180px}
@@ -53,6 +126,26 @@
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .empty{text-align:center;padding:60px 20px;color:var(--muted)}
   .tabpane{display:none}.tabpane.on{display:block}
+  /* -------- Tabel jadi kartu di layar kecil --------
+     Menggeser tabel sepuluh kolom ke samping di HP praktis tidak
+     terbaca; tiap baris dipecah jadi kartu berlabel. */
+  @media(max-width:760px){
+    .scroll{overflow:visible}
+    table.tb{display:block;border:0;background:none;overflow:visible}
+    table.tb thead{display:none}
+    table.tb tbody,table.tb tr,table.tb td{display:block;width:100%}
+    table.tb tr{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+      margin-bottom:12px;padding:6px 2px;box-shadow:var(--sh-1)}
+    table.tb tr:hover td{background:none}
+    table.tb td{border-top:0;display:flex;gap:12px;align-items:flex-start;padding:7px 14px;max-width:none!important}
+    table.tb td+td{border-top:1px dashed var(--line-2)}
+    table.tb td::before{content:attr(data-l);flex:none;width:86px;padding-top:2px;
+      font-family:var(--ff-h);font-size:11px;font-weight:700;letter-spacing:.05em;
+      text-transform:uppercase;color:var(--muted)}
+    table.tb td>*{min-width:0}
+    .act{flex:1}
+    .act button{flex:1;min-width:88px;padding:9px 10px;font-size:12.5px}
+  }
   /* ---- Editor konten ---- */
   .kt-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
   .kt-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
@@ -100,6 +193,18 @@
   .kt-f input:focus,.kt-f select:focus,.kt-f textarea:focus{outline:none;border-color:var(--g-400);background:#fff}
   .kt-f input[readonly]{background:var(--line-2);color:var(--muted)}
   .kt-h{font-size:12px;color:var(--muted);line-height:1.5}
+  /* ---- Akun panel ---- */
+  .pg-akses{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .pg-akses label{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);
+    border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;background:var(--surface)}
+  .pg-akses label:has(input:checked){border-color:var(--g-400);background:var(--g-50);color:var(--g-700)}
+  .pg-akses input{width:auto;margin:0}
+  .pg-peran{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .pg-peran.super{background:var(--ink);color:#fff}
+  .pg-peran.admin{background:var(--b-50);color:var(--b-700)}
+  .pg-chip{font-size:11.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line-2);
+    border-radius:999px;padding:3px 9px;margin-right:5px;display:inline-block}
   /* Kolom bersarang (mis. alamat & titik peta klinik) */
   .kt-grup-in{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-top:8px;
     padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
@@ -190,7 +295,7 @@
 <div class="login" id="login">
   <form class="fcard" id="form-login" novalidate>
     <div style="text-align:center;margin-bottom:24px">
-      <img src="/assets/img/logo-klinik.png?v=7a92fe39" alt="" width="60" height="60" style="margin:0 auto 14px">
+      <img src="/assets/img/logo-klinik.png?v=7276354f" alt="" width="60" height="60" style="margin:0 auto 14px">
       <h1 style="font-size:22px">Panel Admin</h1>
       <p style="font-size:14px;margin-top:6px">Klinik Pratama Sehat Sejahtera</p>
     </div>
@@ -210,34 +315,60 @@
 
 <!-- ============================== APLIKASI ============================== -->
 <div id="app" hidden>
-  <header class="ahd">
-    <img src="/assets/img/logo-klinik.png?v=7a92fe39" alt="">
-    <div><b>Panel Admin</b><small>Klinik Pratama Sehat Sejahtera</small></div>
-    <div class="sp">
-      <span class="who" id="who"></span>
-      <button id="refresh">Muat ulang</button>
-      <button id="logout">Keluar</button>
-    </div>
-  </header>
+<div class="ash">
 
-  <div class="awrap">
+  <!-- ---------------------------- MENU SISI KIRI ---------------------------- -->
+  <aside class="asb" id="asb">
+    <div class="asb-brand">
+      <img src="/assets/img/logo-klinik.png?v=7276354f" alt="">
+      <div><b>Panel Admin</b><small>Sehat Sejahtera</small></div>
+      <button class="asb-x" id="asb-tutup" aria-label="Tutup menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <nav class="anav" id="anav" aria-label="Menu panel admin">
+      <button class="on" data-tab="antrean"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Antrean Hari Ini</span><i class="n" id="n-antrean"></i></button>
+      <button data-tab="daftar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg><span>Pendaftaran</span><i class="n" id="n-daftar"></i></button>
+      <button data-tab="konten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/></svg><span>Konten Situs</span><i class="n" id="n-konten"></i></button>
+      <button data-tab="pesan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 8.5 5.6a2.7 2.7 0 0 0 3 0L22 7"/></svg><span>Pesan Masuk</span><i class="n" id="n-pesan"></i></button>
+      <button data-tab="pengguna" data-super hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.7 8.9a2 2 0 0 1-1.3 0C6.8 20.5 3.3 18 3.3 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.9 1.9 0 0 1 2.5 0C14.7 3.8 17.2 5 19.2 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg><span>Pengguna Panel</span></button>
+      <button data-tab="rekap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M4 20h16"/></svg><span>Rekap &amp; Ekspor</span></button>
+    </nav>
+    <div class="asb-ft">
+      <a href="/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg> Lihat situs publik</a>
+    </div>
+  </aside>
+  <button class="asb-tirai" id="asb-tirai" aria-label="Tutup menu" hidden></button>
+
+  <!-- ------------------------------- ISI PANEL ------------------------------ -->
+  <div class="amain">
+    <header class="atop">
+      <button class="aburger" id="aburger" aria-label="Buka menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg></button>
+      <div class="atop-t"><b id="atop-judul">Antrean Hari Ini</b><span id="atop-sub">Papan antrean pasien hari ini</span></div>
+      <div class="atop-act">
+        <span class="who" id="who"></span>
+        <button id="btn-sandi" title="Ganti kata sandi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2"/><path d="m17 6 2.5 2.5"/><path d="m14.5 8.5 2.5 2.5"/></svg><span class="hide-sm">Kata sandi</span></button>
+        <button id="refresh" title="Muat ulang data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><span class="hide-sm">Muat ulang</span></button>
+        <button id="logout" title="Keluar dari panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span class="hide-sm">Keluar</span></button>
+      </div>
+    </header>
+
+    <div class="awrap">
     <div class="demo" id="demo-note" hidden>
       <span>ℹ️</span><div><strong>Mode demo.</strong> URL Google Apps Script belum dipasang di <code>assets/js/config.js</code>, jadi data di bawah ini adalah contoh. Ikuti <code>docs/ARSITEKTUR.md</code> bagian “Deploy Apps Script” untuk menghubungkan spreadsheet asli.</div>
     </div>
 
-    <div class="kpi">
-      <div class="k hl"><b id="k-antre">0</b><span>Menunggu di antrean</span></div>
-      <div class="k"><b id="k-hari">0</b><span>Pendaftaran hari ini</span></div>
-      <div class="k"><b id="k-baru">0</b><span>Belum dikonfirmasi</span></div>
-      <div class="k"><b id="k-pesan">0</b><span>Pesan belum dibaca</span></div>
+    <div class="ahead">
+      <div>
+        <h1 id="salam">Selamat datang</h1>
+        <p id="salam-sub">Memuat ringkasan hari ini…</p>
+      </div>
+      <span class="ahead-tgl" id="ahead-tgl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg> <span>—</span></span>
     </div>
 
-    <div class="tabs">
-      <button class="on" data-tab="antrean">Antrean Hari Ini</button>
-      <button data-tab="daftar">Pendaftaran</button>
-      <button data-tab="konten">Konten Situs</button>
-      <button data-tab="pesan">Pesan Masuk</button>
-      <button data-tab="rekap">Rekap &amp; Ekspor</button>
+    <div class="kpi">
+      <div class="k k1"><span>Menunggu di antrean</span><b id="k-antre">0</b><em>Papan hari ini</em></div>
+      <div class="k k2"><span>Pendaftaran hari ini</span><b id="k-hari">0</b><em>Termasuk yang sudah selesai</em></div>
+      <div class="k k3"><span>Belum dikonfirmasi</span><b id="k-baru">0</b><em>Menunggu tindakan Anda</em></div>
+      <div class="k k4"><span>Pesan belum dibaca</span><b id="k-pesan">0</b><em>Dari formulir kontak</em></div>
     </div>
 
     <!-- ANTREAN -->
@@ -368,6 +499,19 @@
       <div class="empty" id="empty-pesan" hidden>Belum ada pesan masuk.</div>
     </section>
 
+    <!-- PENGGUNA PANEL -->
+    <section class="tabpane" data-pane="pengguna">
+      <div class="kt-terbit" id="pg-catatan" hidden>
+        <span id="pg-catatan-t"></span>
+      </div>
+      <div class="kt-bar">
+        <div class="kt-ket">Super admin bisa membuka semua bagian. Admin biasa hanya bagian yang dicentang untuknya.</div>
+        <button class="btn btn-primary" id="pg-tambah" style="min-height:40px">+ Tambah akun</button>
+      </div>
+      <div class="fstatus" id="pg-status"></div>
+      <div class="kt-list" id="pg-list"></div>
+    </section>
+
     <!-- REKAP -->
     <section class="tabpane" data-pane="rekap">
       <div class="fcard">
@@ -404,9 +548,64 @@
         </div>
       </div>
 </section>
+    </div><!-- /.awrap -->
+  </div><!-- /.amain -->
+</div><!-- /.ash -->
+</div><!-- /#app -->
+
+
+<!-- MODAL AKUN PANEL -->
+<div class="kt-modal" id="pg-modal" hidden>
+  <div class="kt-modal-in">
+    <div class="kt-modal-h"><b id="pg-modal-j">Tambah akun</b><button id="pg-modal-x" aria-label="Tutup">&times;</button></div>
+    <div class="kt-modal-b">
+      <div class="kt-f"><label for="pg-user">Nama pengguna <span class="req">*</span></label>
+        <input id="pg-user" autocomplete="off" placeholder="mis. loket-pagi">
+        <span class="kt-h">Huruf kecil, angka, titik, garis bawah, tanda hubung. Dipakai untuk masuk dan tidak bisa diubah setelah dibuat.</span></div>
+      <div class="kt-f"><label for="pg-nama">Nama petugas</label>
+        <input id="pg-nama" autocomplete="off" placeholder="mis. Bu Siti"></div>
+      <div class="kt-f"><label for="pg-peran">Peran <span class="req">*</span></label>
+        <select id="pg-peran">
+          <option value="admin">Admin biasa — hanya bagian tertentu</option>
+          <option value="super">Super admin — semua bagian &amp; kelola akun</option>
+        </select></div>
+      <div class="kt-f"><label for="pg-sandi">Kata sandi</label>
+        <input id="pg-sandi" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter">
+        <span class="kt-h" id="pg-sandi-h">Wajib diisi untuk akun baru.</span></div>
+      <div class="kt-f full" id="pg-akses-blok">
+        <label>Bagian yang boleh dibuka <span class="req">*</span></label>
+        <div class="pg-akses" id="pg-akses"></div>
+        <span class="kt-h">Bagian yang tidak dicentang tidak akan muncul di panelnya, dan datanya pun tidak dikirim ke perangkatnya.</span></div>
+      <div class="kt-f full">
+        <label class="kt-cek"><input type="checkbox" id="pg-aktif" checked> <span>Akun aktif (boleh masuk ke panel)</span></label></div>
+    </div>
+    <div style="padding:0 22px"><div class="fstatus" id="pg-modal-s"></div></div>
+    <div class="kt-modal-f">
+      <button class="btn btn-ghost" id="pg-modal-batal">Batal</button>
+      <button class="btn btn-primary" id="pg-modal-simpan">Simpan</button>
+    </div>
   </div>
 </div>
 
+<!-- MODAL GANTI KATA SANDI -->
+<div class="kt-modal" id="sd-modal" hidden>
+  <div class="kt-modal-in" style="width:min(460px,100%)">
+    <div class="kt-modal-h"><b>Ganti kata sandi</b><button id="sd-x" aria-label="Tutup">&times;</button></div>
+    <div class="kt-modal-b" style="grid-template-columns:1fr">
+      <div class="kt-f"><label for="sd-lama">Kata sandi sekarang</label>
+        <input id="sd-lama" type="password" autocomplete="current-password"></div>
+      <div class="kt-f"><label for="sd-baru">Kata sandi baru</label>
+        <input id="sd-baru" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>
+      <div class="kt-f"><label for="sd-ulang">Ulangi kata sandi baru</label>
+        <input id="sd-ulang" type="password" autocomplete="new-password"></div>
+    </div>
+    <div style="padding:0 22px"><div class="fstatus" id="sd-status"></div></div>
+    <div class="kt-modal-f">
+      <button class="btn btn-ghost" id="sd-batal">Batal</button>
+      <button class="btn btn-primary" id="sd-simpan">Simpan</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL EDITOR KONTEN -->
 <div class="kt-modal" id="kt-modal" hidden>
@@ -421,9 +620,9 @@
   </div>
 </div>
 
-<script src="/assets/js/config.js?v=7a92fe39"></script>
-<script src="/assets/js/bawaan.js?v=7a92fe39"></script>
-<script src="/assets/js/admin.js?v=7a92fe39"></script>
-<script src="/assets/js/admin-konten.js?v=7a92fe39"></script>
+<script src="/assets/js/config.js?v=7276354f"></script>
+<script src="/assets/js/bawaan.js?v=7276354f"></script>
+<script src="/assets/js/admin.js?v=7276354f"></script>
+<script src="/assets/js/admin-konten.js?v=7276354f"></script>
 </body>
 </html>

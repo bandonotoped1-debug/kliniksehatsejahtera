@@ -58,12 +58,17 @@ function bangun() {
     /* Dipakai assets/js/status.js untuk menghitung buka/tutup di browser */
     statusBaris: CONFIG.statusBaris || [],
     /* Dipakai forms.js & panel admin agar pilihan kartu tidak pernah berbeda */
-    jenisKartu: CONFIG.jenisKartu || []
+    jenisKartu: CONFIG.jenisKartu || [],
+    /* Pertanyaan tambahan per layanan — dirender forms.js saat layanan dipilih */
+    formulirLayanan: SERVICES.reduce((o, s) => {
+      if (s.formulir && s.formulir.length) o[s.name] = s.formulir;
+      return o;
+    }, {})
   };
   const ASET_SUMBER = [
     'assets/css/style.css', 'assets/js/app.js', 'assets/js/forms.js',
     'assets/js/antrean.js', 'assets/js/admin.js', 'assets/js/admin-konten.js',
-    'assets/js/status.js'
+    'assets/js/status.js', 'assets/js/testimoni.js'
   ];
   const hash = crypto.createHash('sha1');
   ASET_SUMBER.forEach(f => {
@@ -182,7 +187,8 @@ function bangun() {
         { '@context': 'https://schema.org', '@type': 'MedicalProcedure', name: s.name, description: s.intro, provider: { '@id': CONFIG.domain + '/#klinik' } }
       ],
       body: PG.serviceDetail(s),
-      extraJs: s.slug === 'top-dokter' ? ['/assets/js/forms.js'] : []
+      extraJs: s.slug === 'top-dokter' ? ['/assets/js/forms.js']
+        : s.slug === 'khitan' ? ['/assets/js/testimoni.js'] : []
     })));
   });
 
@@ -270,6 +276,24 @@ function bangun() {
     title: 'Offline | Klinik Pratama Sehat Sejahtera',
     description: 'Anda sedang tidak terhubung ke internet.',
     path: '/offline.html', schema: [], body: PG.offlineBody()
+  })));
+
+  /* Lowongan kerja */
+  pages.push(write('lowongan.html', R.page({
+    title: 'Lowongan Kerja Klinik Pratama Sehat Sejahtera Blitar',
+    description: 'Informasi lowongan kerja resmi Klinik Pratama Sehat Sejahtera Blitar. Proses lamaran tidak dipungut biaya apa pun.',
+    path: '/lowongan.html', keywords: ['lowongan kerja klinik Blitar', 'loker perawat Blitar', 'lowongan apoteker Blitar', 'karir klinik Blitar'],
+    schema: [crumbSchema([{ name: 'Beranda', url: '/' }, { name: 'Lowongan Kerja', url: '/lowongan.html' }])],
+    body: PG.lowongan()
+  })));
+
+  /* Produk unggulan apotek */
+  pages.push(write('produk-apotek.html', R.page({
+    title: 'Produk Unggulan Apotek — Madu & Herbal | Klinik Pratama Sehat Sejahtera',
+    description: 'Madu murni, madu anak, herbal tradisional, dan perlengkapan bekam yang tersedia di Depo Farmasi Klinik Pratama Sehat Sejahtera Blitar dan cabang Apotek Mahira Farma.',
+    path: '/produk-apotek.html', keywords: ['madu murni Blitar', 'herbal Blitar', 'apotek Blitar', 'madu anak Blitar'],
+    schema: [crumbSchema([{ name: 'Beranda', url: '/' }, { name: 'Apotek', url: '/apotek.html' }, { name: 'Produk Unggulan', url: '/produk-apotek.html' }])],
+    body: PG.produkApotek()
   })));
 
   /* Antrean publik */

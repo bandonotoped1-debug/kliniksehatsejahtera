@@ -33,6 +33,10 @@ const waktuBuild = STATUS.sekarangWIB();
 const klinikAwal = STATUS.hitungKlinik(STATUS_BARIS, waktuBuild);
 const JENIS_KARTU = CONFIG.jenisKartu || [];
 
+/* Perkiraan biaya tidak ditampilkan bila layanannya memang tanpa biaya
+   tertera (Top Dokter) ATAU bila CONFIG.tampilkanBiaya dimatikan. */
+const biayaTersembunyi = s => s.tanpaBiaya === true || CONFIG.tampilkanBiaya === false;
+
 
 /* Seksi "Ikuti Kami" — IG & FB klinik + IG apotek */
 const sosial = () => `<section class="sec">
@@ -602,7 +606,7 @@ ${phead(s.icon, s.name, esc(s.hero), esc(s.intro), [{ label: 'Beranda', href: '/
       ${s.tanpaDaftar
         ? `<a href="/kontak.html"><span class="qi">${icon('check-circle')}</span><div><b>Tanpa Pendaftaran</b><span>Langsung datang saja</span></div></a>`
         : `<a href="/pendaftaran.html?layanan=${encodeURIComponent(s.name)}"><span class="qi">${icon('calendar')}</span><div><b>Daftar Layanan Ini</b><span>Ambil jadwal sekarang</span></div></a>`}
-      ${s.tanpaBiaya
+      ${biayaTersembunyi(s)
         ? `<a href="#faq"><span class="qi">${icon('whatsapp')}</span><div><b>Lewat WhatsApp</b><span>Admin memandu Anda</span></div></a>`
         : `<a href="#biaya"><span class="qi">${icon('file')}</span><div><b>${esc(s.price.split('·')[0].trim())}</b><span>Perkiraan biaya</span></div></a>`}
       <a href="#faq"><span class="qi">${icon('clock')}</span><div><b>${esc(s.duration)}</b><span>Perkiraan durasi</span></div></a>
@@ -630,12 +634,14 @@ ${phead(s.icon, s.name, esc(s.hero), esc(s.intro), [{ label: 'Beranda', href: '/
       </div>
       <div class="rv">
         <div class="aside-card" id="biaya">
-          <h3>${icon('file')} ${s.tanpaBiaya ? 'Cara Mengakses' : 'Biaya &amp; Durasi'}</h3>
-          ${s.tanpaBiaya ? '' : `<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line-2);font-size:14.5px"><b style="font-family:var(--ff-h);color:var(--ink)">Perkiraan biaya</b><span style="text-align:right">${esc(s.price)}</span></div>`}
+          <h3>${icon('file')} ${biayaTersembunyi(s) ? 'Cara Mengakses' : 'Biaya &amp; Durasi'}</h3>
+          ${biayaTersembunyi(s) ? '' : `<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line-2);font-size:14.5px"><b style="font-family:var(--ff-h);color:var(--ink)">Perkiraan biaya</b><span style="text-align:right">${esc(s.price)}</span></div>`}
           <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:14.5px"><b style="font-family:var(--ff-h);color:var(--ink)">Durasi layanan</b><span>${esc(s.duration)}</span></div>
           ${s.tanpaBiaya
             ? `<p style="font-size:13px;color:var(--body);margin-top:10px">Biaya konsultasi dan obat diinformasikan admin langsung di percakapan WhatsApp, menyesuaikan keluhan dan resep dokter.</p>`
-            : `<p style="font-size:12.5px;color:var(--muted);margin-top:10px">*Biaya final dapat berbeda tergantung tindakan dan obat yang diperlukan. Petugas kami selalu menginformasikan estimasi sebelum tindakan.</p>`}
+            : biayaTersembunyi(s)
+              ? `<p style="font-size:13px;color:var(--body);margin-top:10px">Biaya menyesuaikan tindakan dan obat yang diperlukan. Petugas kami menginformasikan perkiraannya sebelum tindakan — silakan tanyakan lewat WhatsApp atau di loket pendaftaran.</p>`
+              : `<p style="font-size:12.5px;color:var(--muted);margin-top:10px">*Biaya final dapat berbeda tergantung tindakan dan obat yang diperlukan. Petugas kami selalu menginformasikan estimasi sebelum tindakan.</p>`}
           ${s.tanpaDaftar
             ? `<p style="font-size:13px;color:var(--body);margin-top:10px"><strong>Tidak perlu mendaftar.</strong> Datang langsung ke Depo Farmasi pada jam pelayanan, petugas kami siap membantu.</p>`
             : `<a class="btn btn-primary block" style="margin-top:18px" href="${s.slug === 'top-dokter' ? '/layanan/top-dokter.html#form' : '/pendaftaran.html?layanan=' + encodeURIComponent(s.name)}">${icon('calendar')} ${s.slug === 'top-dokter' ? 'Isi Formulir Top Dokter' : 'Daftar ' + esc(s.name)}</a>`}
@@ -666,6 +672,8 @@ ${s.slug === 'top-dokter' ? formTopDokter() : ''}
     </div>
   </div>
 </section>
+
+${s.slug === 'khitan' ? testimoniKhitan() : ''}
 
 <section class="sec">
   <div class="wrap">
@@ -954,6 +962,11 @@ ${phead('calendar', 'Pendaftaran Online', 'Daftar dari rumah, datang tinggal mas
               <select id="sesi" name="sesi" required><option value="">Pilih sesi</option><option>Pagi (06.00–11.30)</option><option>Sore/Malam (17.00–20.30)</option><option>Fleksibel — atur oleh admin</option></select>
               <div class="err">Pilih sesi kunjungan.</div></div>
 
+            <!-- Pertanyaan tambahan khusus layanan tertentu — diisi forms.js -->
+            <div class="field full" id="blok-tambahan" hidden>
+              <div class="fgrid" id="isi-tambahan" style="gap:18px"></div>
+            </div>
+
             <div class="field full"><label for="keluhan">Keluhan singkat <span class="req">*</span></label>
               <textarea id="keluhan" name="keluhan" required placeholder="Contoh: gigi geraham kanan bawah berlubang dan nyeri sejak 3 hari lalu"></textarea>
               <div class="err">Ceritakan keluhan Anda secara singkat.</div></div>
@@ -1206,4 +1219,156 @@ function notFoundBody() {
 </section>`;
 }
 
-module.exports = { home, antrean, profil, layananIndex, serviceDetail, dokter, apotek, artikelIndex, articleDetail, pendaftaran, kontak, privasi, offlineBody, notFoundBody, fmtDate };
+/* ======================================== TESTIMONI KHITAN === */
+/* Hanya menayangkan item yang izinnya sudah dicentang admin. */
+function testimoniKhitan() {
+  const list = (D.TESTIMONI_KHITAN || []).filter(t => t && t.izin === true && (t.teks || t.gambar));
+  if (!list.length) return '';
+
+  const kartu = list.map((t, i) => `<article class="ts-i" aria-roledescription="testimoni" aria-label="Testimoni ${i + 1} dari ${list.length}">
+    ${t.gambar ? `<div class="ts-img"><img src="${esc(t.gambar)}" alt="Dokumentasi khitan di Klinik Pratama Sehat Sejahtera" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>` : ''}
+    <div class="ts-b">
+      ${icon('quote', 'ts-q')}
+      ${t.teks ? `<p>${esc(t.teks)}</p>` : ''}
+      <div class="ts-m">
+        <b>${esc(t.nama || 'Keluarga pasien')}</b>
+        <span>${[t.usia, t.metode, t.waktu].filter(Boolean).map(esc).join(' · ')}</span>
+      </div>
+    </div>
+  </article>`).join('');
+
+  const titik = list.map((_, i) => `<button class="ts-dot${i === 0 ? ' on' : ''}" data-ts-dot="${i}" aria-label="Tampilkan testimoni ${i + 1}"></button>`).join('');
+
+  return `
+<section class="sec sec-alt">
+  <div class="wrap">
+    <div class="sec-head center rv">
+      <span class="eyebrow">${icon('heart')} Cerita Keluarga</span>
+      <h2>Mereka sudah khitan di sini</h2>
+      <p>Ditayangkan atas izin orang tua masing-masing.</p>
+    </div>
+
+    <div class="ts rv" data-testi data-jeda="6000">
+      <div class="ts-rel">${kartu}</div>
+      ${list.length > 1 ? `<div class="ts-nav">
+        <button class="ts-ar" data-ts="prev" aria-label="Testimoni sebelumnya">${icon('arrow-right')}</button>
+        <div class="ts-dots">${titik}</div>
+        <button class="ts-ar" data-ts="next" aria-label="Testimoni berikutnya">${icon('arrow-right')}</button>
+      </div>` : ''}
+    </div>
+  </div>
+</section>`;
+}
+
+/* ============================================== LOWONGAN KERJA === */
+function lowongan() {
+  const list = (D.LOWONGAN || []).filter(l => l && l.posisi);
+  const wa = waLink('Halo Admin Klinik Pratama Sehat Sejahtera, saya ingin melamar untuk posisi:\n\nNama:\nPosisi yang dilamar:\nPendidikan terakhir:\nPengalaman:');
+
+  const kartu = list.map(l => {
+    const ditutup = String(l.status || '').toLowerCase() === 'ditutup';
+    return `<article class="card rv" style="padding:24px 26px${ditutup ? ';opacity:.6' : ''}">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:19px;flex:1;min-width:180px">${esc(l.posisi)}</h3>
+        <span class="pill-lk ${ditutup ? 'tutup' : 'buka'}">${ditutup ? 'Ditutup' : 'Dibuka'}</span>
+      </div>
+      <div class="lk-meta">
+        ${l.tipe ? `<span>${icon('clock')} ${esc(l.tipe)}</span>` : ''}
+        ${l.batas ? `<span>${icon('calendar')} Lamaran ditunggu sampai ${esc(l.batas)}</span>` : ''}
+      </div>
+      ${l.ringkas ? `<p style="font-size:14.5px;margin:14px 0 0">${esc(l.ringkas)}</p>` : ''}
+      ${(l.syarat && l.syarat.length) ? `<div style="margin-top:16px">
+        <b style="font-family:var(--ff-h);font-size:14px;color:var(--ink)">Persyaratan</b>
+        <ul class="lk-list">${l.syarat.map(x => `<li>${icon('check-circle')}<span>${esc(x)}</span></li>`).join('')}</ul></div>` : ''}
+      ${(l.berkas && l.berkas.length) ? `<div style="margin-top:14px">
+        <b style="font-family:var(--ff-h);font-size:14px;color:var(--ink)">Berkas yang dibawa</b>
+        <ul class="lk-list">${l.berkas.map(x => `<li>${icon('file')}<span>${esc(x)}</span></li>`).join('')}</ul></div>` : ''}
+      ${ditutup ? '' : `<a class="btn btn-wa block" style="margin-top:20px" href="${wa}" target="_blank" rel="noopener">${icon('whatsapp')} Lamar Posisi Ini</a>`}
+    </article>`;
+  }).join('');
+
+  const kosong = `<div class="card rv" style="padding:44px 26px;text-align:center">
+    <span class="qi" style="margin:0 auto 14px">${icon('users')}</span>
+    <h3 style="font-size:19px">Belum ada lowongan yang dibuka</h3>
+    <p style="font-size:14.5px;margin-top:8px">Saat ini klinik belum membuka lowongan. Halaman ini diperbarui begitu ada posisi baru, jadi silakan dicek sewaktu-waktu.</p>
+  </div>`;
+
+  return `
+${phead('users', 'Lowongan Kerja', 'Tumbuh bersama Klinik Pratama Sehat Sejahtera',
+  'Kami membuka kesempatan bagi tenaga kesehatan dan tenaga pendukung yang ingin melayani warga Blitar. Seluruh lowongan resmi hanya diumumkan di halaman ini.',
+  [{ label: 'Beranda', href: '/' }, { label: 'Lowongan Kerja' }])}
+
+<section class="sec">
+  <div class="wrap">
+    <div class="fnote rv" style="margin-bottom:26px">${icon('shield')}<div><strong>Proses lamaran kami tidak dipungut biaya apa pun.</strong> Klinik tidak pernah meminta uang pendaftaran, uang seragam, atau pembayaran lewat perantara. Abaikan siapa pun yang meminta hal tersebut mengatasnamakan kami.</div></div>
+    <div class="grid g2" style="gap:18px">${list.length ? kartu : kosong}</div>
+  </div>
+</section>
+
+<section class="sec sec-alt">
+  <div class="wrap">
+    <div class="split" style="align-items:start">
+      <div class="rv">
+        <span class="eyebrow">${icon('route')} Cara Melamar</span>
+        <h2 style="font-size:clamp(24px,3.4vw,32px);margin:16px 0 20px">Tiga langkah, tanpa perantara</h2>
+        <div class="steps">
+          <div class="step"><span class="n">1</span><div><b>Siapkan berkas</b><p>Surat lamaran, CV, ijazah, dan STR/SIP bila posisinya menuntut.</p></div></div>
+          <div class="step"><span class="n">2</span><div><b>Kirim ke admin</b><p>Lewat WhatsApp ${esc(CONFIG.waDisplay)} atau email ${esc(CONFIG.email)}. Sebutkan posisi yang dilamar.</p></div></div>
+          <div class="step"><span class="n">3</span><div><b>Menunggu panggilan</b><p>Pelamar yang memenuhi syarat kami hubungi untuk wawancara di klinik.</p></div></div>
+        </div>
+      </div>
+      <div class="rv">
+        <div class="aside-card">
+          <h3>${icon('phone')} Kontak Rekrutmen</h3>
+          <p style="font-size:14.5px;margin-bottom:16px">Pertanyaan seputar lowongan bisa langsung ditanyakan ke admin klinik pada jam kerja.</p>
+          <a class="btn btn-wa block" href="${wa}" target="_blank" rel="noopener">${icon('whatsapp')} Kirim Lamaran lewat WhatsApp</a>
+          <a class="btn btn-ghost block" style="margin-top:10px" href="mailto:${esc(CONFIG.email)}">${icon('mail')} ${esc(CONFIG.email)}</a>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:14px">Alamat klinik: ${esc(CONFIG.address.street)}, ${esc(CONFIG.address.district)}, ${esc(CONFIG.address.city)}.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>`;
+}
+
+/* ===================================== PRODUK UNGGULAN APOTEK === */
+function produkApotek() {
+  const wa = waLink('Halo Admin Klinik Pratama Sehat Sejahtera, saya ingin menanyakan ketersediaan produk apotek:\n\nNama produk:');
+  return `
+${phead('pill', 'Produk Unggulan Apotek', esc(PRODUK.judul), esc(PRODUK.ringkas),
+  [{ label: 'Beranda', href: '/' }, { label: 'Apotek', href: '/apotek.html' }, { label: 'Produk Unggulan' }])}
+
+<section class="sec">
+  <div class="wrap">
+    <div class="grid g2" style="gap:18px">
+      ${PRODUK.daftar.map((m, i) => `<article class="card rv" style="padding:24px 26px;transition-delay:${i * 55}ms">
+        <span class="qi" style="margin-bottom:14px">${icon('sparkles')}</span>
+        <h3 style="font-size:18px">${esc(m.nama)}</h3>
+        <p style="font-size:14.5px;margin-top:8px">${esc(m.ket)}</p>
+      </article>`).join('')}
+    </div>
+    <div class="fnote rv" style="margin-top:26px">${icon('shield-heart')}<div>${esc(PRODUK.catatan)}</div></div>
+  </div>
+</section>
+
+<section class="sec sec-alt">
+  <div class="wrap">
+    <div class="split" style="align-items:center">
+      <div class="rv">
+        <span class="eyebrow">${icon('pill')} Tebus &amp; Tanya Stok</span>
+        <h2 style="font-size:clamp(24px,3.4vw,32px);margin:16px 0 14px">Ada di Depo Farmasi klinik dan tiga cabang apotek</h2>
+        <p style="font-size:15px;margin-bottom:22px">Produk di halaman ini tersedia di Depo Farmasi klinik. Bila stoknya sedang kosong, petugas mengarahkan Anda ke cabang Apotek Mahira Farma terdekat.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">${icon('whatsapp')} Tanya Ketersediaan</a>
+          <a class="btn btn-ghost" href="/apotek.html">${icon('map-pin')} Lihat Cabang Apotek</a>
+        </div>
+      </div>
+      <div class="rv"><figure class="photo wide">
+        <img src="/assets/img/fasilitas/apotek.svg" alt="Depo Farmasi Klinik Pratama Sehat Sejahtera Blitar" width="800" height="560" loading="lazy" decoding="async">
+      </figure></div>
+    </div>
+  </div>
+</section>`;
+}
+
+module.exports = { home, antrean, profil, layananIndex, serviceDetail, dokter, apotek, artikelIndex, articleDetail, pendaftaran, kontak, privasi, lowongan, produkApotek, testimoniKhitan, offlineBody, notFoundBody, fmtDate };

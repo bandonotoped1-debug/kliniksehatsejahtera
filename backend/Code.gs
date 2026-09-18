@@ -34,16 +34,18 @@ var SHEETS = {
   TESTIMONI:   'Testimoni',
   PESAN:       'Pesan',
   TOPDOKTER:   'TopDokter',
+  ADMIN:       'Admin',         // akun pengelola panel + hak aksesnya
   ANTREAN:     'AntreanHari',   // data harian, dikosongkan tiap pergantian hari
   KONTEN:      'Konten',        // CMS: menu, layanan, dokter, artikel, dll.
   LOG:         'Log'
 };
 
 var HEADERS = {
-  Pendaftaran: ['id','ts','nama','umur','alamat','keluhan','hp','jenisKartu','noKartu','layanan','tanggal','sesi','status','catatan','sumber'],
+  Pendaftaran: ['id','ts','nama','umur','alamat','keluhan','hp','jenisKartu','noKartu','layanan','tanggal','sesi','status','catatan','sumber','tambahan'],
   Testimoni:   ['id','ts','nama','area','layanan','rating','pesan','izin','status'],
   Pesan:       ['id','ts','nama','hp','subjek','pesan','status'],
   TopDokter:   ['id','ts','jenisKartu','noKartu','nama','umur','berat','alamat','jenisObat','keluhan','hp','status','catatan'],
+  Admin:       ['user','nama','peran','akses','salt','hash','aktif','dibuat','oleh'],
   AntreanHari: ['id','tanggal','ts','poli','no','kode','nama','umur','alamat','keluhan','hp','jenisKartu','noKartu','sumber','status','panggil','kembaliSetelah','catatan','regId'],
   Konten:      ['koleksi','id','urut','data','aktif','updated','oleh'],
   Log:         ['ts','aksi','detail','ip']
@@ -165,6 +167,7 @@ function setup() {
   if (!p.getProperty('WA_ADMIN_KHITAN')) p.setProperty('WA_ADMIN_KHITAN', '6287840301148');
   if (!p.getProperty('WA_TOPDOKTER')) p.setProperty('WA_TOPDOKTER', '6285755591040');
   if (!p.getProperty('WA_BEKAM_VAKSIN')) p.setProperty('WA_BEKAM_VAKSIN', '6285755591040');
+  if (!p.getProperty('SALT')) p.setProperty('SALT', Utilities.getUuid());
   pasangTriggerRekap();
   pasangTriggerResetAntrean();
   Logger.log('Setup selesai. Kata sandi awal: ubahsaya123 — segera ganti lewat buatHash().');
@@ -180,33 +183,261 @@ function buatHash(katasandi) {
   return hash;
 }
 
-/* ================================================== AUTH === */
-function cekLogin_(user, pass) {
-  var p = props_();
-  var gagal = Number(CacheService.getScriptCache().get('gagal_' + user) || 0);
-  if (gagal >= 5) throw new Error('Terlalu banyak percobaan. Coba lagi 15 menit lagi.');
-  if (str_(user) !== str_(p.getProperty('ADMIN_USER')) || buatHashDiam_(pass) !== p.getProperty('ADMIN_PASS_HASH')) {
-    CacheService.getScriptCache().put('gagal_' + user, String(gagal + 1), 900);
-    log_('login-gagal', user);
-    throw new Error('Nama pengguna atau kata sandi salah.');
-  }
-  CacheService.getScriptCache().remove('gagal_' + user);
-  var token = Utilities.getUuid();
-  CacheService.getScriptCache().put('sesi_' + token, user, 21600); // 6 jam
-  log_('login-sukses', user);
-  return { token: token, user: user };
+/* =================================================================
+ * AUTH — akun panel, peran, dan hak akses
+ * -----------------------------------------------------------------
+ * Akun disimpan di sheet "Admin". Dua peran:
+ *   • super — bisa segalanya, termasuk mengelola akun lain
+ *   • admin — hanya bagian yang dicentangkan super admin untuknya
+ *
+ * Kata sandi TIDAK PERNAH disimpan. Yang disimpan hash SHA-256 dari
+ * (SALT skrip + salt milik akun itu + kata sandi). Salt per akun bikin
+ * dua orang dengan kata sandi sama punya hash berbeda, jadi bocornya
+ * satu hash tidak membuka akun lain.
+ *
+ * Akun pertama diambil dari Script Property ADMIN_USER/ADMIN_PASS_HASH
+ * (cara lama) supaya panel tidak pernah terkunci saat diperbarui.
+ * ================================================================= */
+var AKSES_SEMUA = ['antrean', 'daftar', 'konten', 'pesan', 'rekap'];
+
+function aksesBersih_(v) {
+  var d = Array.isArray(v) ? v : str_(v).split(',');
+  var out = [];
+  d.forEach(function (x) {
+    var k = str_(x).toLowerCase();
+    if (AKSES_SEMUA.indexOf(k) > -1 && out.indexOf(k) < 0) out.push(k);
+  });
+  return out;
 }
 
+function hashSandi_(salt, katasandi) {
+  var global = props_().getProperty('SALT') || '';
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
+    global + str_(salt) + str_(katasandi), Utilities.Charset.UTF_8);
+  return raw.map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
+}
+
+/** Hash cara lama (tanpa salt per akun) — masih dipakai akun bawaan. */
 function buatHashDiam_(katasandi) {
   var salt = props_().getProperty('SALT') || '';
   var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + str_(katasandi), Utilities.Charset.UTF_8);
   return raw.map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
 }
 
-function wajibAdmin_(token) {
-  var u = token ? CacheService.getScriptCache().get('sesi_' + token) : null;
-  if (!u) throw new Error('Sesi berakhir. Silakan masuk kembali.');
-  return u;
+function adminRows_() {
+  return rows_(SHEETS.ADMIN).filter(function (r) { return str_(r.user); });
+}
+
+function cariAdmin_(user) {
+  var u = str_(user).toLowerCase();
+  return adminRows_().filter(function (r) { return str_(r.user).toLowerCase() === u; })[0] || null;
+}
+
+/** Akun bawaan dari Script Property — dipakai bila sheet Admin masih kosong. */
+function adminBawaan_() {
+  var p = props_();
+  var u = str_(p.getProperty('ADMIN_USER'));
+  var h = str_(p.getProperty('ADMIN_PASS_HASH'));
+  if (!u || !h) return null;
+  return { user: u, nama: u, peran: 'super', akses: AKSES_SEMUA.slice(), hash: h, salt: '', bawaan: true };
+}
+
+function cekLogin_(user, pass) {
+  var cache = CacheService.getScriptCache();
+  var kunciGagal = 'gagal_' + str_(user).toLowerCase();
+  var gagal = Number(cache.get(kunciGagal) || 0);
+  if (gagal >= 5) throw new Error('Terlalu banyak percobaan. Coba lagi 15 menit lagi.');
+
+  var akun = cariAdmin_(user);
+  var cocok = false, peran = 'admin', akses = [], nama = str_(user);
+
+  if (akun) {
+    if (String(akun.aktif).toLowerCase() === 'tidak') {
+      log_('login-nonaktif', str_(user));
+      throw new Error('Akun ini dinonaktifkan. Hubungi super admin klinik.');
+    }
+    cocok = hashSandi_(akun.salt, pass) === str_(akun.hash);
+    peran = str_(akun.peran) === 'super' ? 'super' : 'admin';
+    akses = peran === 'super' ? AKSES_SEMUA.slice() : aksesBersih_(akun.akses);
+    nama = str_(akun.nama) || str_(akun.user);
+  } else if (!adminRows_().length) {
+    /* Sheet masih kosong — pakai akun bawaan dari Script Property. */
+    var b = adminBawaan_();
+    if (b && str_(user) === b.user) {
+      cocok = buatHashDiam_(pass) === b.hash;
+      peran = 'super'; akses = AKSES_SEMUA.slice(); nama = b.nama;
+    }
+  }
+
+  if (!cocok) {
+    cache.put(kunciGagal, String(gagal + 1), 900);
+    log_('login-gagal', str_(user));
+    throw new Error('Nama pengguna atau kata sandi salah.');
+  }
+
+  cache.remove(kunciGagal);
+  var token = Utilities.getUuid();
+  var sesi = { user: str_(akun ? akun.user : user), nama: nama, peran: peran, akses: akses };
+  cache.put('sesi_' + token, JSON.stringify(sesi), 21600); // 6 jam
+  log_('login-sukses', sesi.user + ' (' + peran + ')');
+  return { token: token, user: sesi.nama, akun: sesi.user, peran: peran, akses: akses };
+}
+
+/** Mengembalikan objek sesi. Melempar bila token mati. */
+function sesiDari_(token) {
+  var raw = token ? CacheService.getScriptCache().get('sesi_' + token) : null;
+  if (!raw) throw new Error('Sesi berakhir. Silakan masuk kembali.');
+  try {
+    var o = JSON.parse(raw);
+    if (o && o.user) return o;
+  } catch (x) {}
+  return { user: str_(raw), nama: str_(raw), peran: 'super', akses: AKSES_SEMUA.slice() };  // sesi lama
+}
+
+/** Dipakai aksi yang cukup butuh "sudah masuk". Mengembalikan nama akun. */
+function wajibAdmin_(token) { return sesiDari_(token).user; }
+
+/** Aksi yang menyentuh satu bagian tertentu. */
+function wajibAkses_(token, bagian) {
+  var s = sesiDari_(token);
+  if (s.peran !== 'super' && (s.akses || []).indexOf(bagian) < 0) {
+    throw new Error('Akun Anda tidak diberi akses ke bagian ini. Hubungi super admin klinik.');
+  }
+  return s;
+}
+
+/** Aksi yang hanya boleh dilakukan super admin. */
+function wajibSuper_(token) {
+  var s = sesiDari_(token);
+  if (s.peran !== 'super') throw new Error('Hanya super admin yang boleh mengelola akun.');
+  return s;
+}
+
+/* ------------------------------------------- KELOLA AKUN */
+function adminDaftar_() {
+  var list = adminRows_().map(function (r) {
+    return { user: str_(r.user), nama: str_(r.nama), peran: str_(r.peran) === 'super' ? 'super' : 'admin',
+             akses: aksesBersih_(r.akses), aktif: String(r.aktif).toLowerCase() !== 'tidak',
+             dibuat: str_(r.dibuat) };
+  });
+  var out = { ok: true, akses: AKSES_SEMUA, daftar: list };
+  if (!list.length) {
+    var b = adminBawaan_();
+    out.bawaan = b ? b.user : '';
+    out.catatan = 'Belum ada akun tersimpan. Panel masih memakai akun bawaan dari Script Property; ' +
+                  'buat akun super admin di sini lalu akun bawaan itu berhenti dipakai.';
+  }
+  return out;
+}
+
+function adminSimpan_(d, sesi) {
+  var user = str_(d.user).toLowerCase();
+  if (!/^[a-z0-9._-]{3,30}$/.test(user)) {
+    throw new Error('Nama pengguna hanya boleh huruf kecil, angka, titik, garis bawah, dan tanda hubung (3–30 karakter).');
+  }
+  var peran = str_(d.peran) === 'super' ? 'super' : 'admin';
+  var akses = peran === 'super' ? AKSES_SEMUA.slice() : aksesBersih_(d.akses);
+  if (peran !== 'super' && !akses.length) throw new Error('Pilih minimal satu bagian yang boleh diakses.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(8000);
+  try {
+    var sh = sheet_(SHEETS.ADMIN);
+    var head = HEADERS.Admin;
+    var nilai = sh.getDataRange().getValues();
+    var iUser = head.indexOf('user');
+    var baris = -1;
+    for (var i = 1; i < nilai.length; i++) {
+      if (String(nilai[i][iUser]).toLowerCase() === user) { baris = i + 1; break; }
+    }
+    var lama = baris > 0 ? cariAdmin_(user) : null;
+
+    if (!lama && !str_(d.sandi)) throw new Error('Kata sandi wajib diisi saat membuat akun baru.');
+    if (str_(d.sandi) && str_(d.sandi).length < 8) throw new Error('Kata sandi minimal 8 karakter.');
+
+    /* Super admin terakhir tidak boleh diturunkan atau dinonaktifkan —
+       kalau tidak, tidak ada lagi yang bisa mengelola akun. */
+    var aktif = d.aktif === false ? 'tidak' : 'ya';
+    if (lama && str_(lama.peran) === 'super' && (peran !== 'super' || aktif === 'tidak')) {
+      var superLain = adminRows_().filter(function (r) {
+        return str_(r.peran) === 'super' && String(r.aktif).toLowerCase() !== 'tidak' &&
+               str_(r.user).toLowerCase() !== user;
+      }).length;
+      if (!superLain) throw new Error('Ini satu-satunya super admin yang aktif. Angkat super admin lain lebih dulu.');
+    }
+
+    var salt = lama && str_(lama.salt) ? str_(lama.salt) : Utilities.getUuid();
+    var hash = str_(d.sandi) ? hashSandi_(salt, d.sandi) : str_(lama.hash);
+    var isi = [user, safe_(d.nama) || user, peran, akses.join(','), salt, hash, aktif,
+               lama ? str_(lama.dibuat) : now_(), str_(sesi.user)];
+
+    if (baris > 0) sh.getRange(baris, 1, 1, head.length).setValues([isi]);
+    else sh.appendRow(isi);
+
+    log_('admin-simpan', user + ' (' + peran + ') oleh ' + str_(sesi.user));
+    return { ok: true, user: user, baru: !lama };
+  } finally { lock.releaseLock(); }
+}
+
+function adminHapus_(d, sesi) {
+  var user = str_(d.user).toLowerCase();
+  if (user === str_(sesi.user).toLowerCase()) throw new Error('Anda tidak bisa menghapus akun Anda sendiri.');
+
+  var akun = cariAdmin_(user);
+  if (!akun) throw new Error('Akun tidak ditemukan: ' + user);
+  if (str_(akun.peran) === 'super') {
+    var superLain = adminRows_().filter(function (r) {
+      return str_(r.peran) === 'super' && String(r.aktif).toLowerCase() !== 'tidak' &&
+             str_(r.user).toLowerCase() !== user;
+    }).length;
+    if (!superLain) throw new Error('Ini satu-satunya super admin yang aktif. Angkat super admin lain lebih dulu.');
+  }
+
+  var sh = sheet_(SHEETS.ADMIN);
+  var nilai = sh.getDataRange().getValues();
+  var iUser = HEADERS.Admin.indexOf('user');
+  for (var i = nilai.length - 1; i >= 1; i--) {
+    if (String(nilai[i][iUser]).toLowerCase() === user) {
+      sh.deleteRow(i + 1);
+      log_('admin-hapus', user + ' oleh ' + str_(sesi.user));
+      return { ok: true, user: user };
+    }
+  }
+  throw new Error('Akun tidak ditemukan: ' + user);
+}
+
+/** Ganti kata sandi sendiri — wajib menyebutkan kata sandi lama. */
+function gantiSandi_(d, sesi) {
+  var baru = str_(d.baru);
+  if (baru.length < 8) throw new Error('Kata sandi baru minimal 8 karakter.');
+  if (baru === str_(d.lama)) throw new Error('Kata sandi baru harus berbeda dari yang lama.');
+
+  var akun = cariAdmin_(sesi.user);
+  if (!akun) {
+    /* Masih memakai akun bawaan Script Property: pindahkan ke sheet
+       sekalian, supaya sejak sekarang tersimpan dengan salt per akun. */
+    var b = adminBawaan_();
+    if (!b || buatHashDiam_(d.lama) !== b.hash) throw new Error('Kata sandi lama salah.');
+    var salt = Utilities.getUuid();
+    sheet_(SHEETS.ADMIN).appendRow([b.user, b.nama, 'super', AKSES_SEMUA.join(','), salt,
+                                    hashSandi_(salt, baru), 'ya', now_(), b.user]);
+    log_('sandi-ganti', b.user + ' (pindah dari akun bawaan)');
+    return { ok: true, pindah: true };
+  }
+
+  if (hashSandi_(akun.salt, d.lama) !== str_(akun.hash)) throw new Error('Kata sandi lama salah.');
+
+  var sh = sheet_(SHEETS.ADMIN);
+  var nilai = sh.getDataRange().getValues();
+  var iUser = HEADERS.Admin.indexOf('user'), iHash = HEADERS.Admin.indexOf('hash') + 1;
+  for (var i = 1; i < nilai.length; i++) {
+    if (String(nilai[i][iUser]).toLowerCase() === str_(akun.user).toLowerCase()) {
+      sh.getRange(i + 1, iHash).setValue(hashSandi_(akun.salt, baru));
+      log_('sandi-ganti', str_(akun.user));
+      return { ok: true };
+    }
+  }
+  throw new Error('Akun tidak ditemukan.');
 }
 
 /* ================================================== ROUTES === */
@@ -246,32 +477,38 @@ function doPost(e) {
       case 'kontak':          return json_(simpanPesan_(d));
       case 'topdokter':       return json_(simpanTopDokter_(d));
       case 'login':           return json_(Object.assign({ ok: true }, cekLogin_(d.user, d.pass)));
-      case 'list':            wajibAdmin_(body.token); return json_(daftarSemua_());
-      case 'updateStatus':    wajibAdmin_(body.token); return json_(ubahStatusPendaftaran_(d));
-      case 'updateTestimoni': wajibAdmin_(body.token); return json_(ubahStatus_(SHEETS.TESTIMONI, d.id, d.status));
-      case 'kirimRekap':      wajibAdmin_(body.token); kirimRekapHarian(); return json_({ ok: true });
+      case 'list':            wajibAdmin_(body.token); return json_(daftarSemua_(body.token));
+      case 'updateStatus':    wajibAkses_(body.token, 'daftar'); return json_(ubahStatusPendaftaran_(d));
+      case 'updateTestimoni': wajibAkses_(body.token, 'konten'); return json_(ubahStatus_(SHEETS.TESTIMONI, d.id, d.status));
+      case 'kirimRekap':      wajibAkses_(body.token, 'rekap'); kirimRekapHarian(); return json_({ ok: true });
 
       /* ------------------------------------------------ ANTREAN */
       case 'antrean':         return json_(antreanPublik_());
       case 'cekAntrean':      return json_(antreanCek_(d.kode));
       case 'antreanDaftar':   return json_(antreanTambah_(d, 'online'));
-      case 'antreanAdmin':    wajibAdmin_(body.token); return json_(antreanAdmin_());
-      case 'antreanTambah':   wajibAdmin_(body.token); return json_(antreanTambah_(d, d.sumber === 'online' ? 'online' : 'offline'));
-      case 'antreanBuka':     wajibAdmin_(body.token); return json_(antreanBukaOnline_(d.buka));
-      case 'antreanAksi':     wajibAdmin_(body.token); return json_(antreanAksi_(d));
-      case 'antreanReset':    wajibAdmin_(body.token); resetAntreanHarian(); return json_({ ok: true });
+      case 'antreanAdmin':    wajibAkses_(body.token, 'antrean'); return json_(antreanAdmin_());
+      case 'antreanTambah':   wajibAkses_(body.token, 'antrean'); return json_(antreanTambah_(d, d.sumber === 'online' ? 'online' : 'offline'));
+      case 'antreanBuka':     wajibAkses_(body.token, 'antrean'); return json_(antreanBukaOnline_(d.buka));
+      case 'antreanAksi':     wajibAkses_(body.token, 'antrean'); return json_(antreanAksi_(d));
+      case 'antreanReset':    wajibAkses_(body.token, 'antrean'); resetAntreanHarian(); return json_({ ok: true });
       case 'status':          return json_(statusPublik_());
-      case 'izinSet':         wajibAdmin_(body.token); return json_(izinSet_(d));
+      case 'izinSet':         wajibAkses_(body.token, 'antrean'); return json_(izinSet_(d));
+
+      /* --------------------------------------------- AKUN PANEL */
+      case 'adminDaftar':     wajibSuper_(body.token); return json_(adminDaftar_());
+      case 'adminSimpan':     return json_(adminSimpan_(d, wajibSuper_(body.token)));
+      case 'adminHapus':      return json_(adminHapus_(d, wajibSuper_(body.token)));
+      case 'gantiSandi':      return json_(gantiSandi_(d, sesiDari_(body.token)));
 
       /* ------------------------------------------------- KONTEN */
       case 'konten':          return json_(kontenPublik_());
-      case 'kontenAdmin':     wajibAdmin_(body.token); return json_(kontenAdmin_());
-      case 'kontenSimpan':    return json_(kontenSimpan_(d, wajibAdmin_(body.token)));
-      case 'kontenHapus':     return json_(kontenHapus_(d, wajibAdmin_(body.token)));
-      case 'kontenUrut':      return json_(kontenUrut_(d, wajibAdmin_(body.token)));
-      case 'kontenSeed':      return json_(kontenSeed_(d, wajibAdmin_(body.token)));
-      case 'kontenTerbitkan': return json_(kontenTerbitkan_(wajibAdmin_(body.token)));
-      case 'kontenSetHook':   return json_(kontenSetHook_(d, wajibAdmin_(body.token)));
+      case 'kontenAdmin':     wajibAkses_(body.token, 'konten'); return json_(kontenAdmin_());
+      case 'kontenSimpan':    return json_(kontenSimpan_(d, wajibAkses_(body.token, 'konten').user));
+      case 'kontenHapus':     return json_(kontenHapus_(d, wajibAkses_(body.token, 'konten').user));
+      case 'kontenUrut':      return json_(kontenUrut_(d, wajibAkses_(body.token, 'konten').user));
+      case 'kontenSeed':      return json_(kontenSeed_(d, wajibAkses_(body.token, 'konten').user));
+      case 'kontenTerbitkan': return json_(kontenTerbitkan_(wajibAkses_(body.token, 'konten').user));
+      case 'kontenSetHook':   return json_(kontenSetHook_(d, wajibSuper_(body.token).user));
       default: return json_({ ok: false, error: 'Aksi tidak dikenal: ' + action });
     }
   } catch (err) {
@@ -291,13 +528,29 @@ function simpanPendaftaran_(d, meta) {
     sheet_(SHEETS.PENDAFTARAN).appendRow([
       id, now_(), safe_(d.nama), safe_(d.umur), safe_(d.alamat), safe_(d.keluhan),
       hp, safe_(d.jenisKartu), noKartu_(d.noKartu, d.jenisKartu), safe_(d.layanan), safe_(d.tanggal), safe_(d.sesi),
-      'Baru', '', safe_(meta.src || 'web')
+      'Baru', '', safe_(meta.src || 'web'), tambahanTeks_(d.tambahan)
     ]);
     var antrean = hitungAntrean_(d.tanggal, d.sesi);
     notifikasiAdmin_(id, d, antrean);
     kirimKeChatbotAI_({ event: 'pendaftaran_baru', id: id, data: d, antrean: antrean });
     return { ok: true, id: id, antrean: antrean };
   } finally { lock.releaseLock(); }
+}
+
+/**
+ * Jawaban pertanyaan tambahan per layanan (disusun klinik lewat panel
+ * admin) disimpan sebagai JSON satu sel supaya kolom sheet tidak
+ * bertambah tiap kali klinik menambah pertanyaan.
+ */
+function tambahanTeks_(obj) {
+  if (!obj || typeof obj !== 'object') return '';
+  var bersih = {};
+  Object.keys(obj).slice(0, 25).forEach(function (k) {
+    var nilai = str_(obj[k]).slice(0, 500);
+    if (nilai) bersih[str_(k).slice(0, 120)] = nilai;
+  });
+  if (!Object.keys(bersih).length) return '';
+  return safe_(JSON.stringify(bersih));
 }
 
 /** Nomor urut sementara pada tanggal + sesi yang sama. */
@@ -366,14 +619,19 @@ function simpanTopDokter_(d) {
 }
 
 /* =================================================== ADMIN === */
-function daftarSemua_() {
+function daftarSemua_(token) {
+  var s = sesiDari_(token);
+  var boleh = function (bagian) { return s.peran === 'super' || (s.akses || []).indexOf(bagian) > -1; };
   var batas = new Date(Date.now() - 60 * 864e5);
   var bStr = Utilities.formatDate(batas, tz_(), 'yyyy-MM-dd');
+  /* Data yang tidak boleh dilihat akun ini tidak ikut dikirim — bukan
+     sekadar disembunyikan tampilannya. */
   return {
     ok: true,
-    daftar: rows_(SHEETS.PENDAFTARAN).filter(function (r) { return str_(r.ts).slice(0, 10) >= bStr; }).reverse(),
-    testi:  rows_(SHEETS.TESTIMONI).reverse(),
-    pesan:  rows_(SHEETS.PESAN).reverse()
+    peran: s.peran, akses: s.akses || [], user: s.nama || s.user, akun: s.user,
+    daftar: boleh('daftar') ? rows_(SHEETS.PENDAFTARAN).filter(function (r) { return str_(r.ts).slice(0, 10) >= bStr; }).reverse() : [],
+    testi:  [],
+    pesan:  boleh('pesan') ? rows_(SHEETS.PESAN).reverse() : []
   };
 }
 
@@ -520,7 +778,11 @@ function notifikasiAdmin_(id, d, antrean) {
     '────────────────\n' +
     'Layanan : ' + d.layanan + '\n' +
     'Jadwal  : ' + d.tanggal + ' — ' + d.sesi + '\n' +
-    'No. WA  : ' + normHp_(d.hp);
+    'No. WA  : ' + normHp_(d.hp) +
+    (d.tambahan && typeof d.tambahan === 'object'
+      ? '\n────────────────\n' + Object.keys(d.tambahan).map(function (k) {
+          return k + ' : ' + str_(d.tambahan[k]); }).join('\n')
+      : '');
   kirimWhatsApp_(waTujuanLayanan_(d.layanan), teks);
   notifikasiEmail_('Pendaftaran baru — ' + d.nama + ' (' + d.layanan + ')', teks.replace(/\*/g, ''));
 }
@@ -581,7 +843,7 @@ function kirimKeChatbotAI_(payload) {
  * terjangkau, build tetap berjalan memakai data bawaan.
  * ================================================================= */
 
-var KOLEKSI = ['nav','services','doctors','apoteker','facilities','partners','pharmacies','produk','articles','config'];
+var KOLEKSI = ['nav','services','doctors','apoteker','facilities','partners','pharmacies','produk','articles','lowongan','testiKhitan','config'];
 
 function cekKoleksi_(k) {
   if (KOLEKSI.indexOf(str_(k)) < 0) throw new Error('Koleksi tidak dikenal: ' + str_(k));

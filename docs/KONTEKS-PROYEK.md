@@ -104,19 +104,131 @@ Di `backend/Code.gs`:
   Apotek Mahira Farma. Ditandai `tanpaDaftar: true`.
 - **Top Dokter** punya formulir sendiri dan **tidak menampilkan biaya**
   (`tanpaBiaya: true`). Terhubung ke WA admin 0857-5559-1040.
-- Fitur **testimoni sudah dihapus seluruhnya** atas permintaan pemilik —
-  jangan dihidupkan kembali.
+- Fitur testimoni umum **tetap dihapus**. Yang hidup kembali atas
+  permintaan pemilik hanyalah **testimoni khusus khitan** di halaman
+  layanan khitan (koleksi `testiKhitan`) — jangan melebarkannya ke
+  layanan lain tanpa diminta.
+
+  Tiga aturan yang **ditegakkan kode**, bukan sekadar imbauan:
+  1. Hanya item dengan **izin dicentang** yang dirender. Tanpa centang,
+     testimoninya tersimpan tapi tidak pernah tayang. Ini pengaman
+     persetujuan orang tua — jangan diubah jadi sekadar catatan.
+  2. Petunjuk di editor meminta **nama depan atau inisial**, bukan nama
+     lengkap anak. Halaman ini publik dan terindeks mesin pencari.
+  3. Petunjuk gambar meminta **foto suasana** (anak berpakaian lengkap,
+     keluarga, atau ruangan), bukan foto bagian tubuh.
+
+  Tayangannya berjalan otomatis tapi berhenti saat disentuh, di-hover,
+  atau difokus keyboard; berhenti saat tab tak terlihat; dan tidak
+  berjalan sama sekali bila perangkat memilih "kurangi animasi".
+  Gambar dipakai dari tautan yang ditempel admin — bila tautannya mati,
+  gambarnya disembunyikan dan kartunya tetap utuh.
+- **Perkiraan biaya disembunyikan** dari seluruh halaman publik lewat
+  `CONFIG.tampilkanBiaya: false`. Angka harganya sengaja **tetap disimpan**
+  di tiap layanan — kalau kelak ingin ditampilkan lagi, cukup ubah satu
+  bendera itu. Jangan hapus datanya.
+- **Lowongan kerja** (`/lowongan.html`) memakai koleksi CMS `lowongan` dan
+  sengaja **dikirim kosong** — halaman ini dibaca pelamar sungguhan, jadi
+  jangan pernah diisi contoh. Halamannya otomatis menulis "belum ada
+  lowongan" bila daftarnya kosong, dan selalu memuat peringatan bahwa
+  proses lamaran tidak dipungut biaya.
+- **Produk Unggulan Apotek** (`/produk-apotek.html`) dirakit dari koleksi
+  `produk` yang sudah ada — tidak ada data baru, satu sumber tetap.
 - Alur pelayanan langkah 4 berbunyi **"Penebusan obat"**: resep diteruskan
   ke **Depo Farmasi klinik** lebih dulu; baru bila obatnya kosong pasien
   diarahkan ke apotek terdekat atau cabang Apotek Mahira Farma. Janji
   "jadwal kontrol diingatkan lewat WhatsApp" **dihapus** — belum ada yang
   menjalankannya, jadi jangan ditulis ulang.
 
+### Pertanyaan tambahan per layanan
+Tiap layanan boleh punya `formulir`: daftar pertanyaan yang muncul di
+halaman pendaftaran **begitu layanan itu dipilih**, disusun klinik lewat
+panel admin (kolom "Pertanyaan tambahan"). Formatnya satu baris satu
+pertanyaan: `Pertanyaan :: tipe :: wajib :: pilihan1|pilihan2`, dengan
+tipe `teks, area, angka, tanggal, pilih, centang`.
+
+- Dikirim bersama data lain dan disimpan sebagai **JSON di satu kolom**
+  `tambahan` pada sheet Pendaftaran — supaya kolom sheet tidak bertambah
+  tiap klinik menambah pertanyaan. Maksimal 25 pertanyaan per kiriman.
+- Jawabannya ikut masuk ringkasan WhatsApp ke admin dan tampil di bawah
+  keluhan pada tab Pendaftaran.
+- Berganti layanan **menghapus jawaban sebelumnya**, supaya jawaban
+  layanan lain tidak ikut terkirim.
+- Dikirim kosong untuk semua layanan: hanya klinik yang tahu apa yang
+  perlu ditanyakan sebelum tindakan.
+
 ### Jam operasional
 - 06.00–11.30 pelayanan praktek
 - **11.30–13.00 administrasi apotek — tidak melayani praktek**
 - 17.00–20.30 operasional malam
 - Apotek Mahira Farma (tiga cabang): 07.00–21.00 setiap hari
+
+### Akun panel: super admin & admin biasa
+Akun disimpan di sheet **`Admin`**, bukan lagi satu akun di Script
+Property. Dua peran:
+
+| Peran | Bisa apa |
+|---|---|
+| **super** | Semua bagian + mengelola akun (tab Pengguna Panel) |
+| **admin** | Hanya bagian yang dicentangkan untuknya |
+
+Bagian yang bisa dicentang: `antrean, daftar, konten, pesan, rekap`.
+
+Yang penting dipahami:
+
+- **Penyaringan terjadi di server, bukan cuma di tampilan.** Menu yang
+  tidak diizinkan memang disembunyikan, tapi `daftarSemua_()` juga tidak
+  mengirim datanya, dan tiap aksi dijaga `wajibAkses_()`. Jangan
+  "menyederhanakan" dengan hanya menyembunyikan menu.
+- **Kata sandi tidak pernah disimpan.** Yang disimpan hash SHA-256 dari
+  `SALT skrip + salt akun + kata sandi`. Salt per akun bikin dua orang
+  dengan kata sandi sama punya hash berbeda.
+- **Super admin terakhir dilindungi**: tidak bisa diturunkan jadi admin
+  biasa, dinonaktifkan, atau dihapus selama tidak ada super admin aktif
+  lain — kalau tidak, tidak ada lagi yang bisa mengelola akun. Akun
+  sendiri juga tidak bisa dihapus.
+- **Akun bawaan** (`ADMIN_USER`/`ADMIN_PASS_HASH` di Script Property)
+  tetap berlaku **selama sheet Admin masih kosong**, supaya panel tidak
+  pernah terkunci saat diperbarui. Begitu super admin pertama dibuat —
+  atau begitu akun bawaan mengganti kata sandinya, yang otomatis
+  memindahkannya ke sheet — akun bawaan berhenti dipakai.
+- Semua peran bisa **mengganti kata sandinya sendiri** lewat tombol di
+  bar atas; wajib menyebutkan kata sandi lama.
+
+### Tampilan panel admin
+Kerangkanya: **menu tetap di sisi kiri** (`.asb` + `.anav`) dan isi di
+kanan (`.amain`) — bukan lagi barisan tab pil. Di bawah 1000px menu jadi
+**lemari geser**: tombol hamburger membukanya, tirai gelap menutupnya,
+dan memilih bagian menutupnya sendiri. Bar atas menampilkan judul bagian
+yang sedang dibuka; sapaan dan tanggal dihitung di **WIB**.
+
+Tombol menu memakai `[data-tab]`, panelnya `.tabpane[data-pane]` — dua
+kait itu yang dipakai `bukaTab()` di `admin.js`. **Jangan ganti ke
+selektor berbasis `.tabs`**; kelas itu sudah tidak ada.
+
+Di bawah 760px, tabel Pendaftaran & Pesan berubah jadi **kartu
+bertumpuk** lewat CSS: tiap `<td>` wajib punya `data-l="Judul kolom"`,
+karena label kartunya diambil dari atribut itu (`td::before`). Menambah
+kolom tabel? Tambahkan `data-l`-nya juga, kalau tidak barisnya muncul
+tanpa keterangan di HP.
+
+### Jebakan spesifisitas di bar alamat
+`@media{.tb-addr{display:none}}` **tidak pernah bekerja** karena
+`.topbar span` (kelas + elemen) lebih kuat daripada `.tb-addr` (kelas
+saja), berapa pun urutannya. Akibatnya alamat dan jam tetap dirender di
+HP lalu terpotong `overflow:hidden` — pengunjung melihat teks
+terpenggal. Sekarang ditulis `.topbar .tb-addr`. Pola yang sama berlaku
+untuk aturan penyembunyi lain: **samakan atau lebihi spesifisitas aturan
+yang menampilkan**, jangan hanya mengandalkan urutan.
+
+### Penyimpanan di HP pasien dibersihkan tiap hari
+`forms.js` menyimpan kiriman tertunda (`klinik-queue-v1`) bila jaringan
+pasien sedang putus. Pendaftaran untuk tanggal yang **sudah lewat tidak
+berguna** dikirim ulang, jadi begitu tanggal WIB berganti sisanya dibuang
+dan kunci `klinik-*` di luar daftar `KUNCI_DIPAKAI` ikut dihapus — supaya
+penyimpanan di HP pasien tidak terus menumpuk. Menambah kunci
+`localStorage` baru? **Daftarkan di `KUNCI_DIPAKAI`**, kalau tidak ia akan
+terhapus sendiri pada kunjungan berikutnya.
 
 ### Jenis kartu pasien
 Satu sumber: `CONFIG.jenisKartu` di `src/data/site.js`, dipakai formulir
