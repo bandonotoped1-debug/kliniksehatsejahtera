@@ -179,7 +179,13 @@
 
     function tarikIzin() {
       if (demo) return Promise.resolve();
-      return fetch(CFG.gasUrl + '?action=status&_=' + Date.now())
+      /* POST, bukan GET — balasan GET dari Apps Script tidak membawa
+         header CORS (lihat catatan panjang di antrean.js). */
+      return fetch(CFG.gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'status', data: {} })
+      })
         .then(function (r) { return r.json(); })
         .then(function (j) { if (j && j.ok) { izin = j.izin || null; gambar(); } })
         .catch(function () { /* jadwal tetap dipakai */ });

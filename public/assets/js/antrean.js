@@ -51,11 +51,26 @@
     return Promise.resolve({ ok: true, demo: true, bukaOnline: true, poli: poli, waktu: new Date().toISOString() });
   }
 
-  /* ---------------------------------------------------- AMBIL */
+  /* ---------------------------------------------------- AMBIL
+   * WAJIB POST — jangan diubah kembali ke GET.
+   * Apps Script membalas GET /exec dengan pengalihan ke
+   * script.googleusercontent.com, dan balasan akhir itu TIDAK membawa
+   * header CORS. Dari halaman situs, fetch GET karena itu selalu gagal
+   * dengan "TypeError: Failed to fetch" — papan antrean tampak kosong
+   * tanpa pesan error yang masuk akal. Balasan POST membawa header CORS
+   * dengan benar. doPost() di backend sudah menangani action yang sama
+   * persis, jadi tidak ada perubahan sisi server yang diperlukan. */
+  function kirim(action, data) {
+    return fetch(CFG.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, data: data || {} })
+    }).then(function (r) { return r.json(); });
+  }
+
   function ambil() {
     if (DEMO) return demo();
-    return fetch(CFG.gasUrl + '?action=antrean&_=' + Date.now(), { method: 'GET' })
-      .then(function (r) { return r.json(); })
+    return kirim('antrean')
       .then(function (j) { if (!j || j.ok !== true) throw new Error(j && j.error || 'Gagal memuat'); return j; });
   }
 
@@ -64,8 +79,7 @@
       return Promise.resolve({ ok: true, kode: kode.toUpperCase(), nama: 'Pasien Contoh', poli: 'Poli Umum',
         status: 'menunggu', didepan: 3, perkiraanMenit: 21, demo: true });
     }
-    return fetch(CFG.gasUrl + '?action=cekAntrean&kode=' + encodeURIComponent(kode), { method: 'GET' })
-      .then(function (r) { return r.json(); });
+    return kirim('cekAntrean', { kode: kode });
   }
 
   /* --------------------------------------------------- STATUS */
