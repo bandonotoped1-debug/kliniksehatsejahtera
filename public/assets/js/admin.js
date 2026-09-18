@@ -18,16 +18,33 @@
   window.__adminApi = function (a, p) { return api(a, p); };
 
   /* --------------------------------------------------- API
-   * Apps Script punya dua perilaku yang dulu membuat panel "menggantung":
-   *   1. Permintaan pertama setelah lama menganggur bisa perlu belasan
-   *      detik (cold start) — tanpa batas waktu, tombol diam selamanya.
-   *   2. Bila deployment belum diperbarui / aksesnya bukan "Siapa saja",
-   *      server membalas HALAMAN HTML, bukan JSON. r.json() lalu melempar
-   *      "Unexpected token '<'" yang tidak berarti apa-apa bagi petugas.
-   * Karena itu balasan dibaca sebagai teks dulu, diperiksa, lalu satu kali
-   * dicoba ulang untuk kegagalan yang sifatnya sementara.
+   * Tiga keadaan yang pernah membuat panel "menggantung", dan cara
+   * masing-masing dibedakan:
+   *   1. Cold start — Apps Script yang lama menganggur perlu belasan
+   *      detik. Ini betul-betul sementara, jadi dicoba ulang sekali.
+   *   2. Balasan HTML — deployment belum diterbitkan ulang atau aksesnya
+   *      bukan "Anyone". r.json() dulu melempar "Unexpected token '<'".
+   *      Ini salah pengaturan: mengulanginya percuma.
+   *   3. fetch() gagal total ("Failed to fetch") — URL /exec sudah tidak
+   *      berlaku (deployment dihapus / dibuat ulang sehingga ID-nya
+   *      berubah), atau balasannya tanpa header CORS. Dari dalam
+   *      browser ketiganya terlihat sama persis, jadi pesannya harus
+   *      menyebut semua kemungkinan itu — bukan menebak "cold start".
+   *
+   * BATAS waktu sengaja pendek: satu percobaan 12 detik, ditambah satu
+   * percobaan ulang, jadi paling lama ±24 detik. Dulu 25 detik x 2 = 50
+   * detik, dan justru terasa jauh lebih lambat daripada sebelum ada
+   * batas waktu sama sekali.
    * ------------------------------------------------------- */
-  var BATAS_MS = 25000;                       // batas tunggu satu percobaan
+  var BATAS_MS = 12000;                       // batas tunggu satu percobaan
+
+  /** Penjelasan untuk fetch() yang gagal sebelum sempat membawa balasan. */
+  function pesanPutus() {
+    return 'Tidak bisa menghubungi server Apps Script. Tiga sebab yang mungkin: ' +
+      '(1) alamat /exec di config.js sudah tidak berlaku karena deployment dibuat ulang — ' +
+      'pakai Deploy → Manage deployments → pensil → New version, jangan "New deployment"; ' +
+      '(2) akses deployment belum disetel "Anyone"; atau (3) koneksi internet terputus.';
+  }
 
   function sekaliApi(action, payload, batas) {
     var ctrl = null, jamPutus = null;
@@ -54,7 +71,10 @@
         var j;
         try { j = JSON.parse(t); }
         catch (x) {
-          var e2 = new Error('Balasan server tidak bisa dibaca (status ' + res.status + ').');
+          var e2 = new Error(res.status === 404
+            ? 'Alamat Apps Script tidak ditemukan (404). Deployment dengan ID itu sudah tidak ada — ' +
+              'salin ulang URL /exec yang aktif ke config.js.'
+            : 'Balasan server tidak bisa dibaca (status ' + res.status + ').');
           e2.sementara = res.status >= 500; throw e2;
         }
         if (!j || j.ok !== true) {
@@ -65,10 +85,14 @@
       })
       .catch(function (err) {
         if (err && err.name === 'AbortError') {
-          var e = new Error('Server lama membalas (lebih dari ' + Math.round((batas || BATAS_MS) / 1000) + ' detik).');
-          e.sementara = true; throw e;
+          var e = new Error('Server tidak membalas dalam ' + Math.round((batas || BATAS_MS) / 1000) + ' detik.');
+          e.sementara = true; e.putus = true; throw e;
         }
-        if (err && err.sementara === undefined) err.sementara = true;   // gangguan jaringan
+        if (err && err.sementara === undefined) {
+          /* TypeError dari fetch(): tidak ada balasan sama sekali. */
+          var e2 = new Error(pesanPutus());
+          e2.sementara = true; e2.putus = true; throw e2;
+        }
         throw err;
       })
       .then(function (v) { if (jamPutus) clearTimeout(jamPutus); return v; },
@@ -81,7 +105,7 @@
     var batas = o.batas || BATAS_MS;
     return sekaliApi(action, payload, batas).catch(function (err) {
       if (!err || !err.sementara || o.sekali) throw err;
-      if (o.saatUlang) { try { o.saatUlang(); } catch (x) {} }
+      if (o.saatUlang) { try { o.saatUlang(err); } catch (x) {} }
       return sekaliApi(action, payload, batas);       // satu kali percobaan ulang
     });
   }
@@ -218,10 +242,19 @@
     var user = $('#user').value.trim(), pass = $('#pass').value;
     if (!user || !pass) { show(box, 'bad', 'Nama pengguna dan kata sandi wajib diisi.'); return; }
     btn.disabled = true; btn.textContent = 'Memeriksa…';
-    show(box, 'info', 'Menghubungi server…');
+    /* Hitungan detik berjalan: tanpa ini layar terlihat beku dan petugas
+       menekan tombolnya berkali-kali. */
+    var henti = hitungMundur(box, 'Menghubungi server');
     api('login', { user: user, pass: pass }, {
-      saatUlang: function () { show(box, 'info', 'Server sedang bangun dari tidur, mencoba sekali lagi…'); }
+      saatUlang: function (err) {
+        henti();
+        henti = hitungMundur(box, err && err.putus
+          ? 'Server tidak menjawab, mencoba sekali lagi'
+          : 'Server sedang bangun dari tidur, mencoba sekali lagi');
+      }
     }).then(function (r) {
+      henti();
+      box.className = 'fstatus'; box.innerHTML = '';   // penghitung tidak ditinggal di layar
       state.token = r.token; state.user = r.user || user;
       state.akun = r.akun || user;
       if (r.peran) state.peran = r.peran;
@@ -229,8 +262,51 @@
       simpanSesi();
       enter();
     }).catch(function (err) {
-      show(box, 'bad', esc(err.message || 'Login gagal. Periksa kembali kredensial Anda.'));
+      henti();
+      show(box, 'bad', esc(err.message || 'Login gagal. Periksa kembali kredensial Anda.') +
+        (err && err.putus ? ' <button type="button" id="uji-koneksi" class="btn btn-line" ' +
+          'style="margin-top:10px;padding:6px 14px;font-size:13px">Uji koneksi server</button>' : ''));
     }).then(function () { btn.disabled = false; btn.textContent = 'Masuk'; });
+  });
+
+  /* Menampilkan "Menghubungi server… 4 dtk". Mengembalikan fungsi penghenti. */
+  function hitungMundur(box, teks) {
+    var mulai = Date.now();
+    var tulis = function () {
+      show(box, 'info', esc(teks) + '… <b>' + Math.round((Date.now() - mulai) / 1000) + ' dtk</b>');
+    };
+    tulis();
+    var t = setInterval(tulis, 1000);
+    return function () { clearInterval(t); };
+  }
+
+  /* ------------------------------------------- UJI KONEKSI
+   * Kalau fetch() gagal total, dari sisi browser tidak kelihatan apakah
+   * URL-nya mati, aksesnya salah, atau internetnya putus. Pemeriksaan ini
+   * memakai <img>/GET biasa ke ?action=status — permintaan lintas-asal
+   * yang TIDAK butuh CORS untuk sekadar tahu "alamatnya ada atau tidak".
+   * Hasilnya diterjemahkan ke bahasa yang bisa ditindaklanjuti. */
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('#uji-koneksi')) return;
+    var box = $('#login-status');
+    var url = CFG.gasUrl || '';
+    if (!url) { show(box, 'bad', 'URL Apps Script belum diisi di config.js.'); return; }
+    show(box, 'info', 'Menguji ' + esc(url.slice(0, 48)) + '…');
+    fetch(url + (url.indexOf('?') > -1 ? '&' : '?') + 'action=status', { mode: 'no-cors' })
+      .then(function () {
+        /* mode no-cors menyembunyikan isi balasan, tapi permintaan yang
+           SAMPAI ke server tetap selesai tanpa error. Jadi: alamatnya
+           hidup, berarti masalahnya di izin akses / CORS. */
+        show(box, 'bad', 'Alamatnya hidup, tapi panel tidak diizinkan membacanya. ' +
+          'Buka Apps Script → Deploy → Manage deployments → pensil → ' +
+          'setel <b>Who has access: Anyone</b>, lalu <b>New version</b> → Deploy.');
+      })
+      .catch(function () {
+        show(box, 'bad', 'Alamat Apps Script itu tidak menjawab sama sekali — ' +
+          'kemungkinan besar deployment-nya sudah dihapus atau dibuat ulang sehingga ID-nya berubah. ' +
+          'Buka Apps Script → Deploy → Manage deployments, salin <b>Web app URL</b> yang aktif, ' +
+          'lalu tempel ke <code>GAS_URL</code> dan bangun ulang situsnya.');
+      });
   });
 
   function show(el, type, msg) {
@@ -370,7 +446,10 @@
     if (btn) { btn.disabled = true; btn.dataset.teks = btn.textContent; btn.textContent = 'Memuat…'; }
     pPesan('info', 'Memuat data dari server…');
     return api('list', null, {
-      saatUlang: function () { pPesan('info', 'Server lambat membalas, mencoba sekali lagi…'); }
+      saatUlang: function (err) {
+        pPesan('info', (err && err.putus ? 'Server tidak menjawab' : 'Server lambat membalas') +
+          ', mencoba sekali lagi…');
+      }
     }).then(function (r) {
       state.daftar = r.daftar || []; state.pesan = r.pesan || [];
       if (r.peran) state.peran = r.peran;
