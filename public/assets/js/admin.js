@@ -17,18 +17,73 @@
   /* Dibuka agar admin-konten.js bisa memakai sesi & endpoint yang sama */
   window.__adminApi = function (a, p) { return api(a, p); };
 
-  /* --------------------------------------------------- API */
-  function api(action, payload) {
-    if (DEMO) return demoApi(action, payload);
-    return fetch(CFG.gasUrl, {
+  /* --------------------------------------------------- API
+   * Apps Script punya dua perilaku yang dulu membuat panel "menggantung":
+   *   1. Permintaan pertama setelah lama menganggur bisa perlu belasan
+   *      detik (cold start) — tanpa batas waktu, tombol diam selamanya.
+   *   2. Bila deployment belum diperbarui / aksesnya bukan "Siapa saja",
+   *      server membalas HALAMAN HTML, bukan JSON. r.json() lalu melempar
+   *      "Unexpected token '<'" yang tidak berarti apa-apa bagi petugas.
+   * Karena itu balasan dibaca sebagai teks dulu, diperiksa, lalu satu kali
+   * dicoba ulang untuk kegagalan yang sifatnya sementara.
+   * ------------------------------------------------------- */
+  var BATAS_MS = 25000;                       // batas tunggu satu percobaan
+
+  function sekaliApi(action, payload, batas) {
+    var ctrl = null, jamPutus = null;
+    var opsi = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: action, token: state.token, data: payload || {} })
-    }).then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || j.ok !== true) throw new Error((j && j.error) || 'Gagal');
+    };
+    if (window.AbortController) {
+      ctrl = new AbortController();
+      opsi.signal = ctrl.signal;
+      jamPutus = setTimeout(function () { ctrl.abort(); }, batas || BATAS_MS);
+    }
+    return fetch(CFG.gasUrl, opsi)
+      .then(function (r) { return r.text().then(function (t) { return { status: r.status, teks: t }; }); })
+      .then(function (res) {
+        var t = (res.teks || '').trim();
+        if (/^<(!doctype|html)/i.test(t)) {
+          var e = new Error('Server Apps Script membalas halaman web, bukan data. ' +
+            'Biasanya karena deployment belum diterbitkan ulang (Deploy → Manage deployments → New version) ' +
+            'atau aksesnya belum disetel "Anyone".');
+          e.sementara = false; throw e;
+        }
+        var j;
+        try { j = JSON.parse(t); }
+        catch (x) {
+          var e2 = new Error('Balasan server tidak bisa dibaca (status ' + res.status + ').');
+          e2.sementara = res.status >= 500; throw e2;
+        }
+        if (!j || j.ok !== true) {
+          var e3 = new Error((j && j.error) || 'Gagal memproses permintaan.');
+          e3.sementara = false; throw e3;
+        }
         return j;
-      });
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') {
+          var e = new Error('Server lama membalas (lebih dari ' + Math.round((batas || BATAS_MS) / 1000) + ' detik).');
+          e.sementara = true; throw e;
+        }
+        if (err && err.sementara === undefined) err.sementara = true;   // gangguan jaringan
+        throw err;
+      })
+      .then(function (v) { if (jamPutus) clearTimeout(jamPutus); return v; },
+            function (e) { if (jamPutus) clearTimeout(jamPutus); throw e; });
+  }
+
+  function api(action, payload, opsi) {
+    if (DEMO) return demoApi(action, payload);
+    var o = opsi || {};
+    var batas = o.batas || BATAS_MS;
+    return sekaliApi(action, payload, batas).catch(function (err) {
+      if (!err || !err.sementara || o.sekali) throw err;
+      if (o.saatUlang) { try { o.saatUlang(); } catch (x) {} }
+      return sekaliApi(action, payload, batas);       // satu kali percobaan ulang
+    });
   }
 
   /* ------------------------------------------- data contoh */
@@ -163,9 +218,15 @@
     var user = $('#user').value.trim(), pass = $('#pass').value;
     if (!user || !pass) { show(box, 'bad', 'Nama pengguna dan kata sandi wajib diisi.'); return; }
     btn.disabled = true; btn.textContent = 'Memeriksa…';
-    api('login', { user: user, pass: pass }).then(function (r) {
+    show(box, 'info', 'Menghubungi server…');
+    api('login', { user: user, pass: pass }, {
+      saatUlang: function () { show(box, 'info', 'Server sedang bangun dari tidur, mencoba sekali lagi…'); }
+    }).then(function (r) {
       state.token = r.token; state.user = r.user || user;
-      try { sessionStorage.setItem(TKEY, r.token); } catch (err) {}
+      state.akun = r.akun || user;
+      if (r.peran) state.peran = r.peran;
+      if (r.akses) state.akses = r.akses;      // hak akses sudah ikut di balasan login
+      simpanSesi();
       enter();
     }).catch(function (err) {
       show(box, 'bad', esc(err.message || 'Login gagal. Periksa kembali kredensial Anda.'));
@@ -175,6 +236,20 @@
   function show(el, type, msg) {
     el.className = 'fstatus show ' + type;
     el.innerHTML = '<div>' + msg + '</div>';
+  }
+
+  /* Sesi disimpan lengkap dengan peran & hak akses supaya panel yang
+     dimuat ulang (F5) langsung menampilkan menu yang benar — tidak
+     sempat memperlihatkan tab yang sebenarnya tidak boleh dibuka. */
+  var SKEY = 'klinik-admin-sesi';
+
+  function simpanSesi() {
+    try {
+      sessionStorage.setItem(TKEY, state.token);
+      sessionStorage.setItem(SKEY, JSON.stringify({
+        user: state.user, akun: state.akun, peran: state.peran, akses: state.akses
+      }));
+    } catch (e) {}
   }
 
   /* Pilihan jenis kartu diambil dari konfigurasi situs agar formulir
@@ -195,12 +270,15 @@
     gambarSapaan();
     $('#who').textContent = state.user;
     $('#demo-note').hidden = !DEMO;
+    /* Hak akses sudah diketahui dari balasan login, jadi menu kiri bisa
+       langsung benar tanpa menunggu data pendaftaran selesai diambil. */
+    terapkanAkses();
     load();
   }
 
   $('#logout').addEventListener('click', function () {
     state.token = null;
-    try { sessionStorage.removeItem(TKEY); } catch (e) {}
+    try { sessionStorage.removeItem(TKEY); sessionStorage.removeItem(SKEY); } catch (e) {}
     location.reload();
   });
   $('#refresh').addEventListener('click', load);
@@ -230,6 +308,10 @@
       if (t) t.textContent = j[0];
       if (sub) sub.textContent = j[1];
     }
+    /* Daftar akun baru diambil saat tabnya benar-benar dibuka, dan hanya
+       sekali — supaya login tidak menunggu panggilan yang mungkin tak
+       pernah dipakai. */
+    if (nama === 'pengguna' && !PG.sudah) { PG.sudah = true; pgMuat(); }
     tutupMenu();                      // di layar kecil menu menutup sendiri
     var isi = $('.amain');
     if (isi && isi.scrollTo) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -269,19 +351,52 @@
     if (tgl) tgl.textContent = waktuWIB({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
 
-  /* -------------------------------------------------- LOAD */
+  /* Kabar tentang pemuatan data ditaruh di luar tabpane mana pun —
+     dulu pesannya masuk ke panel Pendaftaran, jadi tak terlihat kalau
+     petugas sedang membuka tab Antrean. */
+  function pPesan(tipe, msg) {
+    var b = $('#panel-status'); if (!b) return;
+    b.className = 'fstatus show ' + tipe;
+    b.innerHTML = '<div>' + msg + '</div>';
+  }
+  function pBersih() { var b = $('#panel-status'); if (b) b.className = 'fstatus'; }
+
+  /* -------------------------------------------------- LOAD
+   * Dulu satu kali muat berarti dua panggilan berurutan ke Apps Script
+   * (list lalu adminDaftar), padahal daftar akun cuma dipakai di tab
+   * Pengguna. Sekarang akun dimuat malas — saat tabnya dibuka. */
   function load() {
-    api('list').then(function (r) {
+    var btn = $('#refresh');
+    if (btn) { btn.disabled = true; btn.dataset.teks = btn.textContent; btn.textContent = 'Memuat…'; }
+    pPesan('info', 'Memuat data dari server…');
+    return api('list', null, {
+      saatUlang: function () { pPesan('info', 'Server lambat membalas, mencoba sekali lagi…'); }
+    }).then(function (r) {
       state.daftar = r.daftar || []; state.pesan = r.pesan || [];
       if (r.peran) state.peran = r.peran;
       if (r.akses) state.akses = r.akses;
       if (r.user) { state.user = r.user; $('#who').textContent = r.user; }
       if (r.akun) state.akun = r.akun;
       terapkanAkses();
+      simpanSesi();
       fillFilters(); renderAll();
-      return pgMuat();
+      pBersih();
     }).catch(function (err) {
-      alert('Gagal memuat data: ' + err.message);
+      /* Token kedaluwarsa: tidak ada gunanya menawarkan "coba lagi" —
+         langsung kembalikan ke layar masuk. */
+      if (/sesi berakhir/i.test(err.message || '')) {
+        try { sessionStorage.removeItem(TKEY); sessionStorage.removeItem(SKEY); } catch (x) {}
+        state.token = null;
+        pBersih();
+        $('#app').hidden = true; $('#login').hidden = false;
+        show($('#login-status'), 'bad', 'Sesi Anda sudah berakhir. Silakan masuk kembali.');
+        return;
+      }
+      pPesan('bad', esc(err.message || 'Gagal memuat data.') +
+        ' <button type="button" id="muat-ulang" class="btn btn-line" style="margin-left:10px;padding:6px 14px;font-size:13px">Coba lagi</button>');
+      var ul = $('#muat-ulang'); if (ul) ul.addEventListener('click', load);
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = btn.dataset.teks || 'Muat ulang'; }
     });
   }
 
@@ -292,7 +407,7 @@
     sel.innerHTML = '<option value="">Semua layanan</option>' + list.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
   }
 
-  ['#q', '#f-status', '#f-layanan', '#f-tanggal'].forEach(function (s) {
+  ['#q', '#f-status', '#f-layanan', '#f-tanggal', '#f-lingkup'].forEach(function (s) {
     var el = $(s); if (el) el.addEventListener('input', renderDaftar);
   });
 
@@ -305,7 +420,7 @@
   }
 
   function renderKpi() {
-    var today = new Date().toISOString().slice(0, 10);
+    var today = hariWIB();
     // set() aman terhadap kartu KPI yang dihapus dari HTML —
     // satu id hilang tidak boleh menghentikan seluruh render.
     var set = function (id, nilai) { var el = $(id); if (el) el.textContent = nilai; };
@@ -334,10 +449,38 @@
     el.dataset.nol = n ? '0' : '1';
   }
 
+  /* Tanggal hari ini menurut WIB — bukan menurut jam perangkat, supaya
+     panel yang dibuka di HP dengan zona waktu lain tetap sama. */
+  function hariWIB() {
+    try {
+      var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta',
+        year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      return p.slice(0, 10);
+    } catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+
+  /* Pendaftaran yang tanggal kunjungannya sudah lewat tidak ikut tampil
+     pada tampilan bawaan — kecuali statusnya masih Baru/Konfirmasi, yang
+     berarti petugas masih punya pekerjaan di baris itu. */
+  var PERLU_TINDAKAN = ['Baru', 'Konfirmasi'];
+
+  function lingkupCocok(d, mode, hari) {
+    var tg = (d.tanggal || '').slice(0, 10);
+    if (mode === 'semua') return true;
+    if (!tg) return mode === 'aktif';         // tanpa tanggal: anggap masih aktif
+    if (mode === 'hari') return tg === hari;
+    if (mode === 'lewat') return tg < hari;
+    return tg >= hari || PERLU_TINDAKAN.indexOf(d.status) > -1;   // 'aktif'
+  }
+
   function filtered() {
     var q = ($('#q').value || '').toLowerCase();
     var st = $('#f-status').value, lay = $('#f-layanan').value, tg = $('#f-tanggal').value;
+    var lk = $('#f-lingkup'), mode = lk ? lk.value : 'semua';
+    var hari = hariWIB();
     return state.daftar.filter(function (d) {
+      /* Filter tanggal manual selalu menang atas pilihan lingkup. */
+      if (!tg && !lingkupCocok(d, mode, hari)) return false;
       if (st && d.status !== st) return false;
       if (lay && d.layanan !== lay) return false;
       if (tg && (d.tanggal || '').slice(0, 10) !== tg) return false;
@@ -393,7 +536,14 @@
 
   function renderDaftar() {
     var rows = filtered();
-    $('#empty-daftar').hidden = rows.length > 0;
+    var kosong = $('#empty-daftar');
+    kosong.hidden = rows.length > 0;
+    if (!rows.length) {
+      var lk = $('#f-lingkup');
+      kosong.textContent = (lk && lk.value === 'aktif' && state.daftar.length)
+        ? 'Tidak ada pendaftaran aktif. Pendaftaran yang tanggalnya sudah lewat disembunyikan — pilih "Sudah lewat" atau "Semua tanggal" untuk melihatnya.'
+        : 'Belum ada pendaftaran yang cocok dengan filter.';
+    }
     $('#tb-daftar').innerHTML = rows.map(function (d) {
       var wa = 'https://wa.me/' + String(d.hp || '').replace(/\D/g, '') +
         '?text=' + encodeURIComponent('Halo ' + d.nama + ', pendaftaran Anda di Klinik Pratama Sehat Sejahtera untuk layanan ' + d.layanan + ' pada ' + d.tanggal + ' telah kami terima. Nomor antrean Anda: ');
@@ -417,10 +567,12 @@
   }
 
   /* Pesan di tab Pendaftaran (mis. alasan pasien belum bisa masuk antrean). */
-  function dPesan(tipe, msg) {
+  function dPesan(tipe, msg, tetap) {
     var b = $('#daftar-status'); if (!b) return;
     b.className = 'fstatus show ' + tipe; b.innerHTML = '<div>' + msg + '</div>';
-    clearTimeout(b._h); b._h = setTimeout(function () { b.className = 'fstatus'; }, 7000);
+    clearTimeout(b._h);
+    /* Pesan gagal memuat menyimpan tombol "Coba lagi" — jangan dihapus sendiri. */
+    if (!tetap) b._h = setTimeout(function () { b.className = 'fstatus'; }, 7000);
   }
 
   /* Konfirmasi bukan sekadar mengganti status: pasien langsung masuk papan
@@ -745,7 +897,7 @@
    * ================================================================= */
   var AKSES_LABEL = { antrean: 'Antrean', daftar: 'Pendaftaran', konten: 'Konten Situs',
                       pesan: 'Pesan Masuk', rekap: 'Rekap & Ekspor' };
-  var PG = { daftar: [], akses: ['antrean', 'daftar', 'konten', 'pesan', 'rekap'], sunting: null };
+  var PG = { daftar: [], akses: ['antrean', 'daftar', 'konten', 'pesan', 'rekap'], sunting: null, sudah: false };
 
   function bolehLihat(bagian) {
     return state.peran === 'super' || (state.akses || []).indexOf(bagian) > -1;
@@ -979,6 +1131,17 @@
   /* ------------------------------------------ sesi tersimpan */
   try {
     var t = sessionStorage.getItem(TKEY);
-    if (t) { state.token = t; state.user = DEMO ? 'admin (demo)' : 'admin'; enter(); }
+    if (t) {
+      state.token = t;
+      state.user = DEMO ? 'admin (demo)' : 'admin';
+      try {
+        var s = JSON.parse(sessionStorage.getItem(SKEY) || '{}');
+        if (s.user) state.user = s.user;
+        if (s.akun) state.akun = s.akun;
+        if (s.peran) state.peran = s.peran;
+        if (s.akses) state.akses = s.akses;
+      } catch (x) {}
+      enter();
+    }
   } catch (e) {}
 })();

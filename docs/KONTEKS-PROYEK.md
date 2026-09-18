@@ -307,6 +307,28 @@ Nomor per layanan ada di **dua tempat** dan harus sama: `waByService`
 "Arah Pengembangan Klinik" hanya tampil di panel admin (tab Rekap &
 Ekspor), atas permintaan pemilik.
 
+### Pendaftaran kadaluarsa tidak ikut ditampilkan
+Tab Pendaftaran punya penyaring **lingkup tanggal** (`#f-lingkup`) dengan
+empat pilihan; bawaannya **Aktif**:
+
+| Pilihan | Yang tampil |
+|---|---|
+| `aktif` (bawaan) | tanggal kunjungan ≥ hari ini, **plus** yang sudah lewat tapi statusnya masih `Baru`/`Konfirmasi` |
+| `hari` | hanya tanggal hari ini |
+| `lewat` | hanya yang tanggalnya sudah lewat |
+| `semua` | seluruh data yang dikirim server (60 hari / 600 baris terakhir) |
+
+Dua aturan yang sengaja dibuat begitu:
+
+1. Baris lama yang masih `Baru`/`Konfirmasi` **tetap muncul** di lingkup
+   Aktif — kalau disembunyikan, pekerjaan yang belum selesai ikut hilang
+   dari pandangan petugas. Daftarnya ada di `PERLU_TINDAKAN`.
+2. Mengisi kotak tanggal (`#f-tanggal`) **mengalahkan** lingkup, jadi
+   petugas selalu bisa membuka satu tanggal tertentu tanpa mengubah
+   pilihan lingkup lebih dulu.
+
+Data lama **tidak dihapus** dari spreadsheet — hanya tidak ditampilkan.
+
 ---
 
 ## 4. Jebakan yang sudah pernah menggigit
@@ -387,6 +409,51 @@ papan antrean tidak cocok.
 Untuk layanan dan artikel di CMS, ID item **harus sama** dengan slug —
 karena ID itulah yang jadi alamat halaman. Editor sudah menolak kalau
 berbeda.
+
+### `Unexpected token '<'` saat masuk panel
+Apps Script **tidak selalu membalas JSON**. Kalau deployment belum
+diterbitkan ulang sebagai versi baru, atau aksesnya bukan "Anyone", ia
+membalas **halaman HTML login Google**. `r.json()` lalu melempar
+`Unexpected token '<', "<!DOCTYPE "...` — pesan yang tidak berarti
+apa-apa bagi petugas loket.
+
+**Sudah diperbaiki di `api()` (`public/assets/js/admin.js`):**
+
+- balasan dibaca sebagai **teks dulu**, diperiksa `<!DOCTYPE`/`<html`,
+  baru di-`JSON.parse`;
+- ada **batas waktu 25 detik** lewat `AbortController` — dulu tombol
+  "Memeriksa…" bisa menggantung selamanya;
+- kegagalan **sementara** (jaringan putus, timeout, HTTP 5xx) dicoba
+  ulang **sekali**, karena permintaan pertama ke Apps Script yang lama
+  menganggur sering gagal karena cold start. Balasan HTML dan error
+  dari server (`ok:false`) ditandai `sementara = false` — itu kesalahan
+  pengaturan, mengulanginya cuma membuang waktu.
+
+Kalau menambah pemanggil baru, pakai `api(aksi, data, { saatUlang })`
+supaya petugas tahu panel sedang mencoba ulang, bukan macet.
+
+### Muat data panel: satu panggilan, bukan dua
+`load()` dulu memanggil `list` lalu **selalu** `adminDaftar`, padahal
+daftar akun hanya dipakai di tab Pengguna — login jadi menunggu dua
+perjalanan bolak-balik ke Apps Script. Sekarang:
+
+- `cekLogin_` sudah mengembalikan `peran` + `akses`, jadi `enter()`
+  langsung memanggil `terapkanAkses()` tanpa menunggu `list`;
+- daftar akun dimuat **malas**, sekali saja, saat tab Pengguna dibuka
+  (`PG.sudah`);
+- sesi disimpan lengkap di `sessionStorage` (`klinik-admin-sesi`) supaya
+  F5 tidak sempat memperlihatkan tab yang tidak boleh dibuka;
+- backend memakai `rowsAkhir_(sheet, n)` — membaca **N baris terakhir**,
+  bukan `getDataRange()` seluruh sheet. Pendaftaran 600 baris, Pesan 300,
+  lalu masih disaring 60 hari. Tanpa ini waktu muat panel tumbuh terus
+  setiap bulan.
+
+### Pesan gagal muat pernah tersembunyi
+Kabar "gagal memuat" dulu ditulis ke `#daftar-status` yang ada **di dalam
+tabpane Pendaftaran** — kalau petugas sedang membuka tab Antrean, pesan
+(berikut tombol "Coba lagi") tidak terlihat sama sekali. Sekarang ada
+`#panel-status` di `.awrap`, **di luar semua tabpane**, dipakai lewat
+`pPesan()`/`pBersih()`. `alert()` yang memblokir layar sudah dibuang.
 
 ### Deploy Netlify
 Yang dipublikasikan adalah **isi folder `public/`**, bukan folder root.

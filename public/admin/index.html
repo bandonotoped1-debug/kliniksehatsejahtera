@@ -7,8 +7,8 @@
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0D2B20">
-<link rel="icon" href="/assets/icons/favicon.svg?v=7276354f" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/css/style.css?v=7276354f">
+<link rel="icon" href="/assets/icons/favicon.svg?v=af61cdf7" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/css/style.css?v=af61cdf7">
 <style>
   /* Wajib paling atas: atribut [hidden] harus mengalahkan display dari class
      (.login{display:grid} & .demo{display:flex} tadinya menimpa aturan bawaan
@@ -295,7 +295,7 @@
 <div class="login" id="login">
   <form class="fcard" id="form-login" novalidate>
     <div style="text-align:center;margin-bottom:24px">
-      <img src="/assets/img/logo-klinik.png?v=7276354f" alt="" width="60" height="60" style="margin:0 auto 14px">
+      <img src="/assets/img/logo-klinik.png?v=af61cdf7" alt="" width="60" height="60" style="margin:0 auto 14px">
       <h1 style="font-size:22px">Panel Admin</h1>
       <p style="font-size:14px;margin-top:6px">Klinik Pratama Sehat Sejahtera</p>
     </div>
@@ -320,7 +320,7 @@
   <!-- ---------------------------- MENU SISI KIRI ---------------------------- -->
   <aside class="asb" id="asb">
     <div class="asb-brand">
-      <img src="/assets/img/logo-klinik.png?v=7276354f" alt="">
+      <img src="/assets/img/logo-klinik.png?v=af61cdf7" alt="">
       <div><b>Panel Admin</b><small>Sehat Sejahtera</small></div>
       <button class="asb-x" id="asb-tutup" aria-label="Tutup menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
@@ -363,6 +363,10 @@
       </div>
       <span class="ahead-tgl" id="ahead-tgl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg> <span>—</span></span>
     </div>
+
+    <!-- Kabar muat data: di luar semua tabpane supaya tetap terbaca
+         apa pun bagian yang sedang dibuka. -->
+    <div class="fstatus" id="panel-status" role="status" aria-live="polite"></div>
 
     <div class="kpi">
       <div class="k k1"><span>Menunggu di antrean</span><b id="k-antre">0</b><em>Papan hari ini</em></div>
@@ -442,6 +446,12 @@
     <section class="tabpane" data-pane="daftar">
       <div class="bar">
         <input class="grow" id="q" placeholder="Cari nama, nomor WA, atau keluhan…">
+        <select id="f-lingkup" title="Rentang tanggal kunjungan yang ditampilkan">
+          <option value="aktif" selected>Aktif (hari ini &amp; mendatang)</option>
+          <option value="hari">Hari ini saja</option>
+          <option value="lewat">Sudah lewat</option>
+          <option value="semua">Semua tanggal</option>
+        </select>
         <select id="f-status"><option value="">Semua status</option><option>Baru</option><option>Konfirmasi</option><option>Selesai</option><option>Batal</option></select>
         <select id="f-layanan"><option value="">Semua layanan</option></select>
         <input type="date" id="f-tanggal">
@@ -620,9 +630,9 @@
   </div>
 </div>
 
-<script src="/assets/js/config.js?v=7276354f"></script>
-<script src="/assets/js/bawaan.js?v=7276354f"></script>
-<script src="/assets/js/admin.js?v=7276354f"></script>
-<script src="/assets/js/admin-konten.js?v=7276354f"></script>
+<script src="/assets/js/config.js?v=af61cdf7"></script>
+<script src="/assets/js/bawaan.js?v=af61cdf7"></script>
+<script src="/assets/js/admin.js?v=af61cdf7"></script>
+<script src="/assets/js/admin-konten.js?v=af61cdf7"></script>
 </body>
 </html>

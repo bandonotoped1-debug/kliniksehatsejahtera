@@ -110,6 +110,33 @@ function rows_(name) {
   });
 }
 
+/* Panel admin cuma butuh data terbaru. Membaca seluruh sheet lewat
+   getDataRange() jadi makin lambat setiap bulan; ini membaca N baris
+   terakhir saja sehingga waktu muat panel tidak ikut tumbuh. Hasilnya
+   sudah terbalik (terbaru di atas). */
+function rowsAkhir_(name, n) {
+  var sh = sheet_(name);
+  var akhir = sh.getLastRow(), kol = sh.getLastColumn();
+  if (akhir < 2 || kol < 1) return [];
+  var head = sh.getRange(1, 1, 1, kol).getValues()[0];
+  var jml = Math.min(n, akhir - 1);
+  var mulai = akhir - jml + 1;
+  var vals = sh.getRange(mulai, 1, jml, kol).getValues();
+  var out = [];
+  for (var i = vals.length - 1; i >= 0; i--) {
+    var o = {}, r = vals[i];
+    for (var c = 0; c < head.length; c++) {
+      var h = String(head[c]).trim();
+      if (!h) continue;
+      var v = r[c];
+      if (v instanceof Date) v = Utilities.formatDate(v, tz_(), h === 'ts' ? "yyyy-MM-dd'T'HH:mm:ss" : 'yyyy-MM-dd');
+      o[h] = v === '' ? '' : v;
+    }
+    out.push(o);
+  }
+  return out;
+}
+
 function nextId_(name, prefix) {
   var sh = sheet_(name);
   var n = Math.max(0, sh.getLastRow() - 1) + 1;
@@ -625,13 +652,17 @@ function daftarSemua_(token) {
   var batas = new Date(Date.now() - 60 * 864e5);
   var bStr = Utilities.formatDate(batas, tz_(), 'yyyy-MM-dd');
   /* Data yang tidak boleh dilihat akun ini tidak ikut dikirim — bukan
-     sekadar disembunyikan tampilannya. */
+     sekadar disembunyikan tampilannya. Dua batas dipakai sekaligus:
+     600 baris terakhir (agar waktu baca tetap tetap) lalu 60 hari
+     terakhir (agar isinya tetap relevan). */
   return {
     ok: true,
     peran: s.peran, akses: s.akses || [], user: s.nama || s.user, akun: s.user,
-    daftar: boleh('daftar') ? rows_(SHEETS.PENDAFTARAN).filter(function (r) { return str_(r.ts).slice(0, 10) >= bStr; }).reverse() : [],
+    daftar: boleh('daftar')
+      ? rowsAkhir_(SHEETS.PENDAFTARAN, 600).filter(function (r) { return str_(r.ts).slice(0, 10) >= bStr; })
+      : [],
     testi:  [],
-    pesan:  boleh('pesan') ? rows_(SHEETS.PESAN).reverse() : []
+    pesan:  boleh('pesan') ? rowsAkhir_(SHEETS.PESAN, 300) : []
   };
 }
 

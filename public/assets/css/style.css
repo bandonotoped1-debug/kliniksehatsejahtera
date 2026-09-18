@@ -469,6 +469,7 @@ body.lock{overflow:hidden}
 .fstatus.show{display:flex}
 .fstatus.ok{background:var(--g-50);border:1px solid var(--g-200);color:var(--g-800)}
 .fstatus.bad{background:var(--r-50);border:1px solid var(--r-100);color:var(--r-700)}
+.fstatus.info{background:#f2f6fb;border:1px solid #d6e3f2;color:#33506e}
 .fstatus .ic{flex:none;margin-top:1px}
 
 /* --------------------------------------------------------- CTA */
