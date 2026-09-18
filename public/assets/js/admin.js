@@ -8,7 +8,7 @@
   var CFG = window.KLINIK || {};
   var TKEY = 'klinik-admin-token';
   var DEMO = !CFG.gasUrl || CFG.gasUrl.indexOf('GANTI_DENGAN') > -1;
-  var state = { token: null, user: '', akun: '', peran: 'super', akses: [], daftar: [], pesan: [] };
+  var state = { token: null, user: '', akun: '', peran: 'super', akses: [], daftar: [], pesan: [], awal: null };
 
   var $ = function (s) { return document.querySelector(s); };
   var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -31,12 +31,16 @@
    *      browser ketiganya terlihat sama persis, jadi pesannya harus
    *      menyebut semua kemungkinan itu — bukan menebak "cold start".
    *
-   * BATAS waktu sengaja pendek: satu percobaan 12 detik, ditambah satu
-   * percobaan ulang, jadi paling lama ±24 detik. Dulu 25 detik x 2 = 50
-   * detik, dan justru terasa jauh lebih lambat daripada sebelum ada
-   * batas waktu sama sekali.
+   * BATAS waktu = 20 detik. Angka ini diukur, bukan ditebak: balasan
+   * login sungguhan dari Apps Script tercatat 4,3 / 7,9 / 11,1 detik
+   * (rata-rata 7,8). Batas 12 detik yang sempat dipakai terlalu mepet —
+   * permintaan yang sebenarnya cuma lambat ikut dibunuh.
+   *
+   * Percobaan ulang HANYA untuk kegagalan yang cepat (putus jaringan).
+   * Kehabisan waktu TIDAK diulang: menunggu 20 detik lalu menunggu 20
+   * detik lagi cuma menggandakan penderitaan tanpa menambah peluang.
    * ------------------------------------------------------- */
-  var BATAS_MS = 12000;                       // batas tunggu satu percobaan
+  var BATAS_MS = 20000;                       // batas tunggu satu percobaan
 
   /** Penjelasan untuk fetch() yang gagal sebelum sempat membawa balasan. */
   function pesanPutus() {
@@ -85,8 +89,10 @@
       })
       .catch(function (err) {
         if (err && err.name === 'AbortError') {
-          var e = new Error('Server tidak membalas dalam ' + Math.round((batas || BATAS_MS) / 1000) + ' detik.');
-          e.sementara = true; e.putus = true; throw e;
+          var e = new Error('Server tidak membalas dalam ' + Math.round((batas || BATAS_MS) / 1000) + ' detik. ' +
+            'Coba lagi sebentar — Google Apps Script kadang lambat saat baru dipakai setelah lama menganggur.');
+          /* waktuHabis: menandai "sudah ditunggu lama" supaya TIDAK diulang. */
+          e.sementara = true; e.putus = true; e.waktuHabis = true; throw e;
         }
         if (err && err.sementara === undefined) {
           /* TypeError dari fetch(): tidak ada balasan sama sekali. */
@@ -104,7 +110,7 @@
     var o = opsi || {};
     var batas = o.batas || BATAS_MS;
     return sekaliApi(action, payload, batas).catch(function (err) {
-      if (!err || !err.sementara || o.sekali) throw err;
+      if (!err || !err.sementara || o.sekali || err.waktuHabis) throw err;
       if (o.saatUlang) { try { o.saatUlang(err); } catch (x) {} }
       return sekaliApi(action, payload, batas);       // satu kali percobaan ulang
     });
@@ -259,6 +265,7 @@
       state.akun = r.akun || user;
       if (r.peran) state.peran = r.peran;
       if (r.akses) state.akses = r.akses;      // hak akses sudah ikut di balasan login
+      state.awal = r.awal || null;             // data tabel juga, bila backend sudah baru
       simpanSesi();
       enter();
     }).catch(function (err) {
@@ -349,6 +356,15 @@
     /* Hak akses sudah diketahui dari balasan login, jadi menu kiri bisa
        langsung benar tanpa menunggu data pendaftaran selesai diambil. */
     terapkanAkses();
+    /* Balasan login yang baru sudah membawa data awalnya sekalian, jadi
+       panel langsung terisi tanpa perjalanan kedua ke server. Kalau
+       backend-nya masih versi lama (tanpa `awal`), jatuh ke load(). */
+    if (state.awal) {
+      var data = state.awal; state.awal = null;
+      terapkanData(data);      // renderAll() di dalamnya sudah memanggil qaMuat()
+      pBersih();
+      return;
+    }
     load();
   }
 
@@ -437,6 +453,20 @@
   }
   function pBersih() { var b = $('#panel-status'); if (b) b.className = 'fstatus'; }
 
+  /* Menuangkan balasan `list` ke layar. Dipisah karena dipakai dua kali:
+     dari load(), dan dari balasan `login` yang kini sudah membawa data
+     awalnya sekalian (lihat loginDenganData_ di Code.gs). */
+  function terapkanData(r) {
+    state.daftar = r.daftar || []; state.pesan = r.pesan || [];
+    if (r.peran) state.peran = r.peran;
+    if (r.akses) state.akses = r.akses;
+    if (r.user) { state.user = r.user; $('#who').textContent = r.user; }
+    if (r.akun) state.akun = r.akun;
+    terapkanAkses();
+    simpanSesi();
+    fillFilters(); renderAll();
+  }
+
   /* -------------------------------------------------- LOAD
    * Dulu satu kali muat berarti dua panggilan berurutan ke Apps Script
    * (list lalu adminDaftar), padahal daftar akun cuma dipakai di tab
@@ -451,14 +481,7 @@
           ', mencoba sekali lagi…');
       }
     }).then(function (r) {
-      state.daftar = r.daftar || []; state.pesan = r.pesan || [];
-      if (r.peran) state.peran = r.peran;
-      if (r.akses) state.akses = r.akses;
-      if (r.user) { state.user = r.user; $('#who').textContent = r.user; }
-      if (r.akun) state.akun = r.akun;
-      terapkanAkses();
-      simpanSesi();
-      fillFilters(); renderAll();
+      terapkanData(r);
       pBersih();
     }).catch(function (err) {
       /* Token kedaluwarsa: tidak ada gunanya menawarkan "coba lagi" —
