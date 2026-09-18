@@ -12,9 +12,9 @@
 
 const CONFIG = {
   // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.netlify.app/').replace(/\/+$/, ''),
+  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
-  shortName: 'KSS',
+  shortName: 'Klinik SSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
   // Nomor WhatsApp admin pendaftaran (format internasional tanpa +)
   waNumber: '6289653502700',
@@ -27,7 +27,7 @@ const CONFIG = {
     'Terapi Bekam':           { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' },
     'Vaksinasi Umrah & Haji': { number: '6285755591040', display: '0857-5559-1040', label: 'Admin Bekam & Vaksinasi' }
   },
-  email: 'kliniksejahtera058@gmail.com',
+  email: 'halo@kliniksehatsejahtera.id',
   address: {
     street: 'Perum Puri Kenari Asri Blok E4, Karangtengah',
     district: 'Kec. Sananwetan',
@@ -119,8 +119,14 @@ const CONFIG = {
     apotekWeb: 'https://www.mahirafarma.com/',
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
-  // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbzR7uIAmvBnYyXsCzWKUNs-eXkyIOtIJzMqYHLaKQ0wWZ0-wpD8r3xksvx244s3qxYv/exec',
+  /* URL Web App Apps Script (deploy: Execute as Me, Access: Anyone).
+     Diperbarui 19 Sep 2026. Alamat sebelumnya (…B0gd9Rmz/exec) masih
+     hidup tetapi terkunci pada VERSI LAMA Code.gs — `?action=status`
+     di sana membalas "Aksi tidak dikenal", jadi jam buka/tutup dan
+     seluruh perbaikan sesudahnya tidak pernah sampai ke situs.
+     Deployment baru ini membaca spreadsheet yang sama (sudah dicek
+     lewat ?action=konten), jadi tidak ada data yang berpindah. */
+  gasUrl: 'https://script.google.com/macros/s/AKfycbzwUGEcf7w1CEF6lnsbNld_RTditt0ZiABxc6nLNEKLs5sQS14-EnzAwAU0NQ5vkCGu/exec',
   /* Perkiraan biaya disembunyikan dari seluruh halaman publik atas
      permintaan pemilik. Ubah ke true bila kelak ingin ditampilkan lagi;
      data harganya sengaja tetap disimpan di tiap layanan. */
