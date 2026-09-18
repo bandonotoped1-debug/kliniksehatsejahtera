@@ -502,6 +502,30 @@ tabpane Pendaftaran** — kalau petugas sedang membuka tab Antrean, pesan
 `#panel-status` di `.awrap`, **di luar semua tabpane**, dipakai lewat
 `pPesan()`/`pBersih()`. `alert()` yang memblokir layar sudah dibuang.
 
+### Panggilan ke Apps Script WAJIB POST, tidak boleh GET
+Apps Script membalas `GET /exec` dengan pengalihan ke
+`script.googleusercontent.com`, dan balasan akhir itu **tidak membawa
+header CORS**. Akibatnya dari halaman situs setiap `fetch` GET gagal
+dengan `TypeError: Failed to fetch` — bukan error server, bukan salah
+URL, dan tidak muncul apa pun di log Apps Script. Balasan **POST**
+membawa header CORS dengan benar.
+
+Terdeteksi 19 Sep 2026: `antrean.js` memakai GET untuk `action=antrean`
+dan `action=cekAntrean`, `status.js` memakai GET untuk `action=status`.
+Artinya **papan antrean pasien tidak pernah memuat** dan jam buka/tutup
+langsung tidak pernah tersinkron — diam-diam, karena `.catch()` di
+`tarikIzin()` sengaja tidak berisik. Ketiganya sudah diubah ke POST.
+
+Membingungkan karena membuka `<gasUrl>?action=status` **langsung di
+address bar** tetap menampilkan JSON dengan benar (navigasi biasa tidak
+tunduk pada CORS). Jadi "dibuka di browser hasilnya benar" **bukan**
+bukti bahwa situs bisa memanggilnya.
+
+`doPost()` sudah menangani `antrean`, `cekAntrean`, dan `status`, jadi
+perpindahan ini tidak butuh perubahan sisi server. Satu-satunya GET yang
+boleh tersisa adalah tombol "Uji koneksi server" di panel admin, dan itu
+memakai `mode:'no-cors'` yang memang hanya menguji keterjangkauan.
+
 ### Deploy Netlify
 Yang dipublikasikan adalah **isi folder `public/`**, bukan folder root.
 Dulu pernah muncul "Page not found" karena yang ter-deploy folder root
