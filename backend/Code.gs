@@ -310,6 +310,28 @@ function cekLogin_(user, pass) {
   return { token: token, user: sesi.nama, akun: sesi.user, peran: peran, akses: akses };
 }
 
+/* ---------------------------------------------------------------
+ * LOGIN SEKALIAN MEMBAWA DATA AWAL
+ * ---------------------------------------------------------------
+ * Membuka spreadsheet adalah bagian paling lambat di Apps Script
+ * (diukur: 4,3–11,1 detik sekali jalan). Dulu masuk panel berarti DUA
+ * eksekusi berurutan — `login` lalu `list` — jadi petugas menunggu dua
+ * kali harga itu. Karena `list` toh selalu dipanggil tepat sesudah
+ * login berhasil, datanya sekalian dikirim di sini: satu eksekusi,
+ * satu kali buka spreadsheet.
+ *
+ * `awal` sengaja dibungkus try/catch: kalau pengambilan datanya gagal,
+ * login TETAP berhasil dan panel jatuh ke pemanggilan `list` biasa.
+ * Gagal memuat tabel tidak boleh berarti gagal masuk.
+ * --------------------------------------------------------------- */
+function loginDenganData_(d) {
+  var sesi = cekLogin_(d.user, d.pass);
+  var out = Object.assign({ ok: true }, sesi);
+  try { out.awal = daftarSemua_(sesi.token); }
+  catch (err) { out.awal = null; log_('login-awal-gagal', String(err)); }
+  return out;
+}
+
 /** Mengembalikan objek sesi. Melempar bila token mati. */
 function sesiDari_(token) {
   var raw = token ? CacheService.getScriptCache().get('sesi_' + token) : null;
@@ -503,7 +525,7 @@ function doPost(e) {
       case 'testimoni':       return json_(simpanTestimoni_(d));
       case 'kontak':          return json_(simpanPesan_(d));
       case 'topdokter':       return json_(simpanTopDokter_(d));
-      case 'login':           return json_(Object.assign({ ok: true }, cekLogin_(d.user, d.pass)));
+      case 'login':           return json_(loginDenganData_(d));
       case 'list':            wajibAdmin_(body.token); return json_(daftarSemua_(body.token));
       case 'updateStatus':    wajibAkses_(body.token, 'daftar'); return json_(ubahStatusPendaftaran_(d));
       case 'updateTestimoni': wajibAkses_(body.token, 'konten'); return json_(ubahStatus_(SHEETS.TESTIMONI, d.id, d.status));
