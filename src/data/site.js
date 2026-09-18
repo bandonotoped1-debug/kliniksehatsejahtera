@@ -120,7 +120,7 @@ const CONFIG = {
     linktree: 'https://linktr.ee/kliniksehatsejahtera'
   },
   // URL Web App Apps Script (deploy: Execute as Me, Access: Anyone)
-  gasUrl: 'https://script.google.com/macros/s/AKfycbzR7uIAmvBnYyXsCzWKUNs-eXkyIOtIJzMqYHLaKQ0wWZ0-wpD8r3xksvx244s3qxYv/exec',
+  gasUrl: 'https://script.google.com/macros/s/AKfycbwnK17H2xJqPQVXBaCzu4MvZf0FvulX97XpH3PEGiFlSg_nnUl6SWUJFdy1VDAwMr8U/exec',
   /* Perkiraan biaya disembunyikan dari seluruh halaman publik atas
      permintaan pemilik. Ubah ke true bila kelak ingin ditampilkan lagi;
      data harganya sengaja tetap disimpan di tiap layanan. */
