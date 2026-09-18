@@ -432,6 +432,53 @@ apa-apa bagi petugas loket.
 Kalau menambah pemanggil baru, pakai `api(aksi, data, { saatUlang })`
 supaya petugas tahu panel sedang mencoba ulang, bukan macet.
 
+### Deployment lama terkunci di VERSI LAMA — pakai "New version"
+Di Apps Script ada dua tombol yang kelihatan mirip:
+
+- **Deploy → Manage deployments → ✏️ → New version** → URL `/exec` tetap
+  sama **dan** kodenya ikut diperbarui. Ini yang benar.
+- **Deploy → New deployment** → mencetak URL `/exec` **baru**. Deployment
+  lama tetap hidup, tetapi **terkunci pada versi kode saat ia dibuat**.
+
+Terjadi 18–19 Sep 2026. URL di `site.js` masih menunjuk deployment lama;
+`?action=status` di sana membalas `{"ok":false,"error":"Aksi tidak
+dikenal"}` karena `doGet` versi itu belum mengenal `status`. Jadi kode
+`Code.gs` di editor sudah baru, tapi yang **dilayani ke situs** masih
+yang lama. Gejalanya membingungkan: sebagian fitur jalan, sebagian tidak,
+dan login kadang berhasil kadang gagal.
+
+**Cara memeriksa, dan jebakannya.** Buka di browser:
+`<gasUrl>?action=status`. Sehat bila membalas
+`{"ok":true,"tanggal":...}`. Kalau membalas "Aksi tidak dikenal",
+deployment itu memakai kode lama.
+
+⚠️ **Jangan menguji URL ini dari sandbox/agen** — `WebFetch` dan `curl`
+dari lingkungan Claude membalas **404 untuk URL Apps Script yang sehat
+sekalipun**. Sempat membuat kesimpulan keliru "URL-nya mati". Uji selalu
+dari browser sungguhan (Claude in Chrome atau browser pemilik klinik).
+
+Dari dalam browser, deployment mati **tidak bisa dibedakan** dari
+"internet putus" — fetch lintas-asal yang gagal selalu muncul sebagai
+`TypeError: Failed to fetch`, tanpa kode status. Karena itu pesan
+gagalnya menyebut ketiga kemungkinan sekaligus, dan ada tombol **Uji
+koneksi server** yang memanggil `?action=status` dengan `mode:'no-cors'`:
+kalau permintaan itu selesai, alamatnya hidup dan masalahnya di izin
+akses; kalau ikut gagal, alamatnya memang mati.
+
+**Sebelum mengganti `gasUrl`, pastikan spreadsheet-nya sama.** Buka
+`<gasUrl baru>?action=konten` dan periksa isinya benar-benar data klinik
+ini. Kalau deployment baru ternyata proyek lain, menggantinya akan
+membuat situs membaca spreadsheet kosong.
+
+### Batas waktu: pendek, bukan panjang
+Percobaan pertama **12 detik**, ditambah satu percobaan ulang → paling
+lama ±24 detik. Versi pertama memakai 25 detik × 2 = 50 detik, dan
+pemilik klinik langsung mengeluh panelnya *makin lambat* — benar, karena
+pada keadaan gagal yang bertambah cuma waktu menunggunya. Kalau menaikkan
+angka ini lagi, ingat: yang dirasakan pemakai adalah **waktu sampai ada
+kabar**, bukan peluang berhasil. Selama menunggu ditampilkan hitungan
+detik berjalan (`hitungMundur()`) supaya layar tidak terlihat beku.
+
 ### Muat data panel: satu panggilan, bukan dua
 `load()` dulu memanggil `list` lalu **selalu** `adminDaftar`, padahal
 daftar akun hanya dipakai di tab Pengguna — login jadi menunggu dua
