@@ -556,6 +556,31 @@ perpindahan ini tidak butuh perubahan sisi server. Satu-satunya GET yang
 boleh tersisa adalah tombol "Uji koneksi server" di panel admin, dan itu
 memakai `mode:'no-cors'` yang memang hanya menguji keterjangkauan.
 
+### Pindah ke Vercel — tiga jebakan yang sudah ditemukan
+Situs dipindah dari Netlify ke Vercel (Nov 2026). Tiga hal yang bikin
+salah kalau tidak tahu:
+
+1. **`vercel.json` dibaca dari AKAR repositori, bukan folder keluaran.**
+   `build.js` dulu menulisnya ke `public/` — tidak pernah terbaca sama
+   sekali. Sekarang berkasnya di `/vercel.json` dan ikut di-commit;
+   emisi dari build.js sudah dihapus.
+2. **`cleanUrls` harus `false`.** Berkas lama menyetel `true`, padahal
+   seluruh tautan, canonical, dan sitemap situs ini memakai akhiran
+   `.html`. Dengan `true`, setiap `/layanan.html` dialihkan 308 ke
+   `/layanan` — alamat akhirnya tidak cocok dengan canonical-nya.
+3. **Nama domain tidak datang sendiri.** `CONFIG.domain` membaca env
+   `SITE_URL` → `URL` (diisi Netlify) → `VERCEL_PROJECT_PRODUCTION_URL`
+   (diisi Vercel) → cadangan `kliniksehatsejahtera.id`. Domain `.id` itu
+   **belum aktif**. Tanpa baris Vercel, seluruh canonical dan sitemap
+   di build Vercel menunjuk alamat yang tidak ada.
+
+Header di `netlify.toml` dan `/vercel.json` adalah **dua sumber yang
+harus disamakan manual**. Kalau menambah header, ubah keduanya.
+
+Tombol **Terbitkan** di panel admin memanggil Build Hook. Setelah pindah,
+hook-nya harus diganti ke **Deploy Hook Vercel** — kalau tidak, menekan
+Terbitkan hanya membangun ulang situs Netlify yang sudah dimatikan.
+
 ### Deploy Netlify
 Yang dipublikasikan adalah **isi folder `public/`**, bukan folder root.
 Dulu pernah muncul "Page not found" karena yang ter-deploy folder root
