@@ -386,20 +386,14 @@ function bangun() {
   /*                  /404.html                  404
   `);
 
-  write('vercel.json', JSON.stringify({
-    cleanUrls: true, trailingSlash: false,
-    headers: [
-      { source: '/assets/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
-      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
-      { source: '/admin/(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
-      { source: '/(.*)', headers: [
-        { key: 'X-Content-Type-Options', value: 'nosniff' },
-        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=()' }
-      ]}
-    ],
-    rewrites: [{ source: '/admin', destination: '/admin/index.html' }]
-  }, null, 2));
+  /* vercel.json TIDAK dihasilkan di sini.
+     Vercel membaca vercel.json dari AKAR REPOSITORI, bukan dari folder
+     keluaran — berkas yang dulu ditulis ke public/ tidak pernah terbaca
+     sama sekali, dan isinya sempat salah (cleanUrls:true, padahal
+     seluruh tautan dan canonical situs ini memakai akhiran .html).
+     Konfigurasinya sekarang ada di /vercel.json yang ikut di-commit.
+     Kalau menambah header baru, ubah DUA tempat: netlify.toml dan
+     vercel.json di akar. */
 
   /* -------------------- DATA BAWAAN UNTUK EDITOR ADMIN */
   /* Dipakai tombol "Isi dari data situs" dan mode demo editor konten. */
@@ -471,6 +465,6 @@ window.KLINIK_BAWAAN = ${JSON.stringify(KONTEN.bawaan(D), null, 1)};
 
   console.log(`✓ ${pages.length} halaman dibuat` + (dihapus ? ` · ${dihapus} halaman lama dihapus` : ''));
   pages.forEach(p => console.log('  /' + p));
-  console.log('✓ manifest.webmanifest, robots.txt, sitemap.xml, _headers, vercel.json, assets/js/config.js');
+  console.log('✓ manifest.webmanifest, robots.txt, sitemap.xml, _headers, assets/js/config.js');
 
 }
