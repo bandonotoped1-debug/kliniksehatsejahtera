@@ -11,8 +11,20 @@
  * ============================================================= */
 
 const CONFIG = {
-  // Domain final. Bisa ditimpa saat build lewat env: SITE_URL=https://xxx.netlify.app node build.js
-  domain: (process.env.SITE_URL || process.env.URL || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
+  /* Domain final, dipakai untuk canonical, Open Graph, dan sitemap.
+     Urutan sumbernya penting:
+       SITE_URL                        → dipasang manual saat build lokal
+       URL                             → diisi otomatis oleh Netlify
+       VERCEL_PROJECT_PRODUCTION_URL   → diisi otomatis oleh Vercel (tanpa https://)
+       kliniksehatsejahtera.id         → cadangan terakhir
+     Tanpa baris Vercel itu, build di Vercel jatuh ke domain .id yang
+     BELUM aktif — seluruh canonical dan sitemap jadi menunjuk alamat
+     yang tidak ada. Jangan dihapus sampai domain .id benar-benar hidup. */
+  domain: (process.env.SITE_URL
+        || process.env.URL
+        || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL : '')
+        || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '')
+        || 'https://kliniksehatsejahtera.id').replace(/\/+$/, ''),
   siteName: 'Klinik Pratama Sehat Sejahtera',
   shortName: 'Klinik SSS',
   tagline: 'Klinik Pratama & Apotek Terpadu di Kota Blitar',
